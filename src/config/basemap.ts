@@ -1,0 +1,110 @@
+/**
+ * basemap.ts — the single source of truth for the tiled basemap and 3D terrain.
+ *
+ * Everything the app knows about *where map tiles come from* lives in this one
+ * config object. The rest of the app references styles/terrain only through
+ * here, so the basemap can be swapped (e.g. to a self-hosted Protomaps PMTiles
+ * build) without touching map init, controls, or overlay logic.
+ *
+ * ─────────────────────────────────────────────────────────────────────────
+ * LICENSING (all commercial-use-safe in this default build):
+ *   • Basemap styles: OpenFreeMap public instance (https://openfreemap.org) —
+ *     OpenStreetMap-derived vector tiles, no API key, free for commercial use.
+ *     Attribution to OpenStreetMap contributors + OpenFreeMap is required and
+ *     is enforced by the always-on AttributionControl (see map/mapInit.ts).
+ *   • Terrain DEM: AWS open-data Terrarium terrain tiles (see TERRAIN below).
+ * ─────────────────────────────────────────────────────────────────────────
+ *
+ * PRODUCTION: migrating to self-hosted Protomaps (PMTiles) for scale.
+ * OpenFreeMap is generous but is a shared public good with no SLA. For a
+ * commercial product at scale, host your own basemap:
+ *   1. Download a Protomaps planet/region PMTiles extract (clip to Malawi to
+ *      keep it small) — Protomaps basemaps are OSM-derived, BSD/ODbL-clean.
+ *   2. `npm i pmtiles`, then register the protocol once at startup:
+ *        import { Protocol } from "pmtiles";
+ *        const protocol = new Protocol();
+ *        maplibregl.addProtocol("pmtiles", protocol.tile);
+ *   3. Point a BasemapStyle below at a Protomaps style JSON whose `sources`
+ *      use `"url": "pmtiles://https://your-cdn/malawi.pmtiles"`.
+ *   4. Swap DEFAULT_STYLE / add the new entry to BASEMAP_STYLES — no other app
+ *      code changes, because everything routes through this object.
+ * See README "Migrating the basemap to self-hosted Protomaps".
+ */
+
+import type { StyleSpecification } from "maplibre-gl";
+
+/** A basemap option shown in the style switcher. */
+export interface BasemapStyle {
+  /** Stable key persisted in the URL hash. */
+  id: string;
+  /** Human label for the UI. */
+  label: string;
+  /**
+   * Either a style-JSON URL (string) or an inline StyleSpecification.
+   * Routing both through one type is what makes the Protomaps swap trivial.
+   */
+  style: string | StyleSpecification;
+}
+
+/**
+ * Street / Light / Terrain basemaps.
+ *
+ * "Terrain" reuses the Liberty street style as its base imagery — the 3D
+ * terrain *mesh* is applied on top via TERRAIN (see map/terrain.ts). This way
+ * the "Terrain" choice gives relief + roads + labels together.
+ */
+export const BASEMAP_STYLES: readonly BasemapStyle[] = [
+  {
+    id: "streets",
+    label: "Streets",
+    style: "https://tiles.openfreemap.org/styles/liberty",
+  },
+  {
+    id: "light",
+    label: "Light / Minimal",
+    style: "https://tiles.openfreemap.org/styles/positron",
+  },
+  {
+    id: "terrain",
+    label: "Terrain",
+    // Bright basemap reads well under hillshade; terrain mesh added on top.
+    style: "https://tiles.openfreemap.org/styles/bright",
+  },
+] as const;
+
+export const DEFAULT_STYLE_ID = "streets";
+
+export function getStyle(id: string): BasemapStyle {
+  return BASEMAP_STYLES.find((s) => s.id === id) ?? BASEMAP_STYLES[0];
+}
+
+/**
+ * 3D terrain configuration.
+ *
+ * We use Terrarium-encoded terrain-RGB tiles. The "terrarium" encoding is the
+ * one published as AWS Open Data ("Terrain Tiles"), derived from public-domain
+ * DEMs (SRTM, GMTED, NED, …).
+ *
+ * // VERIFY: Confirm the exact terrain-tile endpoint's terms of use before
+ * // commercial launch. The canonical AWS Open Data bucket is
+ * // s3://elevation-tiles-prod (public-domain DEM derivatives, no usage
+ * // restriction). The HTTPS mirror below is convenient for development but its
+ * // operator may rate-limit or change terms — for production, serve the
+ * // Terrarium tiles from your own CDN / S3 ("requester pays" or a copy) and
+ * // update TERRAIN_TILES accordingly.
+ */
+export const TERRAIN = {
+  /** MapLibre source id for the DEM. */
+  sourceId: "terrain-dem",
+  /** Terrarium-encoded terrain-RGB tiles. */
+  tiles: [
+    "https://s3.amazonaws.com/elevation-tiles-prod/terrarium/{z}/{x}/{y}.png",
+  ],
+  encoding: "terrarium" as const,
+  tileSize: 256,
+  maxzoom: 15,
+  /** Vertical exaggeration applied when terrain is enabled. */
+  exaggeration: 1.4,
+  attribution:
+    'Terrain: <a href="https://registry.opendata.aws/terrain-tiles/" target="_blank" rel="noopener">AWS Terrain Tiles</a> (public-domain DEMs)',
+} as const;

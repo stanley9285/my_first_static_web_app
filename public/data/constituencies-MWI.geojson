@@ -1,0 +1,18 @@
+{
+  "type": "FeatureCollection",
+  "metadata": {
+    "_comment": "PLACEHOLDER / SCAFFOLD — no geometry bundled. See README 'Licensing & Commercial Use'. TODO: drop a licence-cleared constituency GeoJSON here.",
+    "license": "UNCONFIRMED — must be verified before commercial use (OSM/ODbL share-alike, or Malawi Electoral Commission as authoritative-but-unlicensed alternative).",
+    "featureSchema": {
+      "properties": {
+        "id": "string — stable unique id (e.g. OSM relation id or MEC code)",
+        "name": "string — constituency name",
+        "region": "string — parent ADM1 region name (optional)",
+        "district": "string — parent ADM2 district name (optional)",
+        "level": "constituency"
+      },
+      "geometry": "Polygon | MultiPolygon (WGS84 / EPSG:4326)"
+    }
+  },
+  "features": []
+}
