@@ -36,6 +36,8 @@ export interface SelectedFeatureInfo {
   featureType?: string;
   elevation?: number;
   description?: string;
+  /** [lng, lat] of a point feature — used for the GPS / directions actions. */
+  coord?: [number, number];
 }
 
 interface OverlayCallbacks {
@@ -269,7 +271,7 @@ export class OverlayManager {
     const id = f.id ?? 0;
     this.select(overlay, id);
     const p = f.properties ?? {};
-    this.cb.onSelect(infoFromProps(overlay, id, p));
+    this.cb.onSelect(infoFromProps(overlay, id, p, f.geometry));
 
     if (getOverlay(overlay).kind === "point") {
       const coord = pointCoord(f.geometry);
@@ -384,7 +386,12 @@ export class OverlayManager {
   getInfo(overlay: OverlayId, id: string | number): SelectedFeatureInfo | null {
     const feat = this.findFeature(overlay, id);
     if (!feat) return null;
-    return infoFromProps(overlay, feat.id!, feat.properties as unknown as Record<string, unknown>);
+    return infoFromProps(
+      overlay,
+      feat.id!,
+      feat.properties as unknown as Record<string, unknown>,
+      feat.geometry
+    );
   }
 
   /** Select + fly to a feature by overlay/id (also used by the sidebar list). */
@@ -392,7 +399,12 @@ export class OverlayManager {
     const feat = this.findFeature(overlay, id);
     if (!feat) return null;
     this.select(overlay, feat.id!);
-    const info = infoFromProps(overlay, feat.id!, feat.properties as unknown as Record<string, unknown>);
+    const info = infoFromProps(
+      overlay,
+      feat.id!,
+      feat.properties as unknown as Record<string, unknown>,
+      feat.geometry
+    );
 
     if (getOverlay(overlay).kind === "point") {
       const coord = pointCoord(feat.geometry);
@@ -416,7 +428,8 @@ export class OverlayManager {
 function infoFromProps(
   overlay: OverlayId,
   id: string | number,
-  p: Record<string, unknown> | null
+  p: Record<string, unknown> | null,
+  geom?: GeoJSON.Geometry
 ): SelectedFeatureInfo {
   const props = p ?? {};
   const num = (v: unknown): number | undefined =>
@@ -430,6 +443,7 @@ function infoFromProps(
     featureType: props.featureType as string | undefined,
     elevation: num(props.elevation),
     description: props.description as string | undefined,
+    coord: geom ? pointCoord(geom) ?? undefined : undefined,
   };
 }
 
