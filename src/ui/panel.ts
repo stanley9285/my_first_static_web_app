@@ -33,6 +33,7 @@ export class PanelUI {
     regions: { loaded: false },
     districts: { loaded: false },
     constituencies: { loaded: false },
+    landforms: { loaded: false },
   };
   private data: Partial<Record<OverlayId, OverlayCollection>> = {};
 
@@ -74,13 +75,28 @@ export class PanelUI {
     const card = this.root.querySelector<HTMLElement>("#detail-card");
     if (!card) return;
     const cfg = getOverlay(info.overlay);
-    const rows: Array<[string, string]> = [["Type", SINGULAR[info.overlay]]];
-    if (info.region) rows.push(["Region", info.region]);
-    if (info.district) rows.push(["District", info.district]);
-    // Placeholder stat fields — wire real data here later.
-    rows.push(["Population", "—"]);
-    rows.push(["Area (km²)", "—"]);
-    rows.push(["Feature ID", String(info.id)]);
+
+    const rows: Array<[string, string]> = [];
+    let note = "";
+
+    if (info.overlay === "landforms") {
+      // Natural feature: show category, elevation, region, then a description.
+      if (info.featureType) rows.push(["Type", capitalize(info.featureType)]);
+      if (info.region) rows.push(["Region", info.region]);
+      if (typeof info.elevation === "number") {
+        rows.push(["Elevation", `${info.elevation.toLocaleString()} m`]);
+      }
+      if (info.description) note = info.description;
+    } else {
+      // Administrative boundary: type + parents + placeholder stat fields.
+      rows.push(["Type", SINGULAR[info.overlay]]);
+      if (info.region) rows.push(["Region", info.region]);
+      if (info.district) rows.push(["District", info.district]);
+      rows.push(["Population", "—"]);
+      rows.push(["Area (km²)", "—"]);
+      rows.push(["Feature ID", String(info.id)]);
+      note = "Stat fields are placeholders — connect a data source to populate them.";
+    }
 
     card.innerHTML = `
       <div class="detail-head" style="border-color:${cfg.color}">
@@ -95,7 +111,7 @@ export class PanelUI {
           )
           .join("")}
       </dl>
-      <p class="detail-note">Stat fields are placeholders — connect a data source to populate them.</p>
+      ${note ? `<p class="detail-note">${escapeHtml(note)}</p>` : ""}
     `;
     card.hidden = false;
     card
@@ -116,7 +132,7 @@ export class PanelUI {
     this.root.innerHTML = `
       <header class="sidebar-head">
         <h1>Malawi</h1>
-        <p class="subtitle">Boundary overlays</p>
+        <p class="subtitle">Boundaries &amp; landforms</p>
       </header>
       <div class="tabs" role="tablist" aria-label="Overlay layers"></div>
       <div class="tab-body" id="tab-body" role="tabpanel"></div>
@@ -255,4 +271,9 @@ const SINGULAR: Record<OverlayId, string> = {
   regions: "Region",
   districts: "District",
   constituencies: "Constituency",
+  landforms: "Landform",
 };
+
+function capitalize(s: string): string {
+  return s.charAt(0).toUpperCase() + s.slice(1);
+}

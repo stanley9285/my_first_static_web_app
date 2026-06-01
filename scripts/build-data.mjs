@@ -134,9 +134,10 @@ async function main() {
     console.log(`  ${r.properties.name}: ${ds.length}`);
   }
   console.log(
-    "\nNOTE: constituencies-MWI.geojson is NOT generated here — it is a curated/" +
-      "licence-sensitive layer. See public/data/constituencies-MWI.geojson and the\n" +
-      "README 'Licensing & Commercial Use' section."
+    "\nNOTE: constituencies-MWI.geojson and landforms-MWI.geojson are NOT " +
+      "generated here. Constituencies are licence-sensitive (scaffold only); " +
+      "landforms are a curated set of factual natural features. See the README " +
+      "'Licensing & Commercial Use' section and public/data/SOURCES.md."
   );
 }
 

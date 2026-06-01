@@ -9,6 +9,7 @@ fast, offline-capable, and avoids hammering the upstream providers.
 | `geoBoundaries-MWI-ADM1.geojson` (3 regions) | geoBoundaries gbOpen ADM1, Malawi | `npm run data:build` | CC-BY 4.0 |
 | `geoBoundaries-MWI-ADM2.geojson` (28 districts) | geoBoundaries gbOpen ADM2, Malawi | `npm run data:build` | CC-BY 4.0 |
 | `constituencies-MWI.geojson` | **Not bundled — scaffold only** | manual (see below) | **Unconfirmed — verify before commercial use** |
+| `landforms-MWI.geojson` (29 features) | Curated geographic facts | manual edit | Public domain (factual names & coordinates) |
 
 ## geoBoundaries (ADM1 / ADM2)
 
@@ -42,3 +43,14 @@ Candidate sources and their caveats:
 
 **Do not ship the constituency layer in a commercial product until the source's
 rights are confirmed.** See the README "Licensing & Commercial Use" section.
+
+## Landforms / natural features
+
+`landforms-MWI.geojson` is a curated set of notable Malawian natural features
+(peaks, plateaus, highlands, lakes, rivers, wetlands, parks and reserves) as
+labelled points. The contents are **factual geographic data** (names,
+categories, representative coordinates) which are not copyrightable, so the
+layer is **commercial-use-safe**. Coordinates are approximate label points, not
+survey-grade. Extend it by appending features matching the `metadata.featureSchema`
+in the file (`level: "landform"`, `featureType`, optional
+`elevation`/`region`/`description`; Point geometry).
