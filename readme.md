@@ -17,9 +17,12 @@ street/terrain/label detail and toggleable political boundary overlays —
   labels that scale naturally; no custom label management.
 - **Style switcher** — Streets, Light/Minimal, Terrain.
 - **3D terrain toggle** — MapLibre terrain mesh + hillshade from a Terrarium DEM.
-- **Three independent overlay tabs** — semi-transparent fills + outlines so the
-  basemap stays visible; hover highlight + name tooltip; click flies to the
-  feature and opens a detail card.
+- **Four independent overlay tabs** — Regions, Districts, Constituencies, and
+  **Landforms** (notable natural features: peaks, plateaus, lakes, rivers,
+  wetlands and protected areas, shown as labelled, colour-coded markers).
+  Boundaries render as semi-transparent fills + outlines so the basemap stays
+  visible; hover highlight + name tooltip; click flies to the feature and opens
+  a detail card.
 - **State survives refresh** — active style, terrain, layer visibility, tab,
   camera, and selection are all encoded in the URL hash (shareable links).
 - **Always-on attribution**, **keyboard-accessible** controls (ARIA), responsive
@@ -73,6 +76,7 @@ public/data/               Local datasets served at /data/*.geojson
   geoBoundaries-MWI-ADM1.geojson    3 regions
   geoBoundaries-MWI-ADM2.geojson    28 districts (+ parent region)
   constituencies-MWI.geojson        scaffold (empty — see below)
+  landforms-MWI.geojson             29 curated natural features (points)
   SOURCES.md               Per-file provenance + refresh instructions
 ```
 
@@ -83,6 +87,7 @@ public/data/               Local datasets served at /data/*.geojson
 | Regions (3) | `public/data/geoBoundaries-MWI-ADM1.geojson` | geoBoundaries gbOpen ADM1 | CC-BY 4.0 |
 | Districts (28) | `public/data/geoBoundaries-MWI-ADM2.geojson` | geoBoundaries gbOpen ADM2 | CC-BY 4.0 |
 | Constituencies | `public/data/constituencies-MWI.geojson` | **not bundled** (scaffold) | **unconfirmed** |
+| Landforms (29) | `public/data/landforms-MWI.geojson` | curated geographic facts | public domain (facts) |
 
 `npm run data:build` (see `scripts/build-data.mjs`) downloads the geoBoundaries
 ADM1/ADM2 GeoJSON straight from the geoBoundaries release data on GitHub,
@@ -145,6 +150,21 @@ visible.
 - **Obligation:** credit **geoBoundaries — Runfola, D. et al. (2020),
   *geoBoundaries: A global database of political administrative boundaries*,
   PLoS ONE 15(4): e0231866** (shown in the attribution control).
+
+### Landforms / natural features
+
+- **Source:** a small **curated** set of Malawi's notable natural features
+  (peaks, plateaus, highlands, lakes, rivers, wetlands, parks and reserves),
+  stored at `public/data/landforms-MWI.geojson`.
+- **License:** the contents are **factual geographic data** — place names,
+  categories, and representative coordinates — which are **not copyrightable**,
+  so the layer is safe for commercial use. It was compiled from general
+  geographic knowledge, **not** copied from any rights-encumbered database.
+- **Notes:** coordinates are representative label points (approximate), not
+  survey-grade. To extend it, append features matching the documented schema
+  (`metadata.featureSchema` in the file; `level: "landform"`, `featureType`,
+  optional `elevation`/`region`/`description`; Point geometry). No code change
+  is needed — the loader and the labelled point layer pick them up.
 
 ### Constituencies — ⚠ RIGHTS NOT CONFIRMED, DO NOT SHIP COMMERCIALLY YET
 

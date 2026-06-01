@@ -18,7 +18,12 @@ import maplibregl, {
 } from "maplibre-gl";
 
 import type { OverlayCollection, OverlayId, BBox } from "../types";
-import { OVERLAYS, getOverlay } from "../config/overlays";
+import {
+  OVERLAYS,
+  getOverlay,
+  LANDFORM_COLORS,
+  LANDFORM_DEFAULT_COLOR,
+} from "../config/overlays";
 import { loadOverlay } from "../data/loader";
 
 export interface SelectedFeatureInfo {
@@ -27,6 +32,10 @@ export interface SelectedFeatureInfo {
   name: string;
   region?: string;
   district?: string;
+  /** Landform-specific fields (populated only for the point overlay). */
+  featureType?: string;
+  elevation?: number;
+  description?: string;
 }
 
 interface OverlayCallbacks {
@@ -38,6 +47,22 @@ interface OverlayCallbacks {
 const srcId = (id: OverlayId) => `ov-${id}-src`;
 const fillId = (id: OverlayId) => `ov-${id}-fill`;
 const lineId = (id: OverlayId) => `ov-${id}-line`;
+const circleId = (id: OverlayId) => `ov-${id}-circle`;
+const labelId = (id: OverlayId) => `ov-${id}-label`;
+
+/** Build a MapLibre `match` expression mapping featureType → marker colour. */
+function landformColorExpr(): maplibregl.ExpressionSpecification {
+  const stops: (string | string[])[] = [];
+  for (const [type, color] of Object.entries(LANDFORM_COLORS)) {
+    stops.push(type, color);
+  }
+  return [
+    "match",
+    ["get", "featureType"],
+    ...stops,
+    LANDFORM_DEFAULT_COLOR,
+  ] as unknown as maplibregl.ExpressionSpecification;
+}
 
 export class OverlayManager {
   private map: MLMap;
@@ -98,6 +123,11 @@ export class OverlayManager {
       this.map.addSource(srcId(id), { type: "geojson", data });
     }
 
+    if (cfg.kind === "point") {
+      this.addPointLayers(id);
+      return;
+    }
+
     if (!this.map.getLayer(fillId(id))) {
       this.map.addLayer({
         id: fillId(id),
@@ -140,11 +170,76 @@ export class OverlayManager {
     }
   }
 
+  /** Coloured circle markers + always-on name labels for a point overlay. */
+  private addPointLayers(id: OverlayId): void {
+    const vis = this.visible[id] ? "visible" : "none";
+    const color = landformColorExpr();
+
+    if (!this.map.getLayer(circleId(id))) {
+      this.map.addLayer({
+        id: circleId(id),
+        type: "circle",
+        source: srcId(id),
+        layout: { visibility: vis },
+        paint: {
+          "circle-color": color,
+          // Grow on hover / selection via feature-state.
+          "circle-radius": [
+            "interpolate",
+            ["linear"],
+            ["zoom"],
+            5,
+            ["case", ["boolean", ["feature-state", "selected"], false], 6, 4],
+            11,
+            ["case", ["boolean", ["feature-state", "selected"], false], 10, 7],
+          ],
+          "circle-stroke-color": "#ffffff",
+          "circle-stroke-width": [
+            "case",
+            ["boolean", ["feature-state", "selected"], false],
+            3,
+            ["boolean", ["feature-state", "hover"], false],
+            2.5,
+            1.5,
+          ],
+          "circle-opacity": 0.95,
+        },
+      });
+    }
+
+    if (!this.map.getLayer(labelId(id))) {
+      this.map.addLayer({
+        id: labelId(id),
+        type: "symbol",
+        source: srcId(id),
+        layout: {
+          visibility: vis,
+          "text-field": ["get", "name"],
+          "text-size": ["interpolate", ["linear"], ["zoom"], 5, 10, 11, 14],
+          "text-offset": [0, 1.1],
+          "text-anchor": "top",
+          "text-font": ["Noto Sans Regular"],
+          // Let MapLibre hide colliding labels at low zoom, revealing more as
+          // the user zooms in — keeps the country view uncluttered.
+          "text-optional": true,
+          "text-padding": 4,
+        },
+        paint: {
+          "text-color": "#2a2f3a",
+          "text-halo-color": "#ffffff",
+          "text-halo-width": 1.6,
+          "text-halo-blur": 0.4,
+        },
+      });
+    }
+  }
+
   private wireEvents(): void {
     if (this.eventsWired) return;
     this.eventsWired = true;
     for (const o of OVERLAYS) {
-      const layer = fillId(o.id);
+      // Interact via the circle for point overlays, the fill for polygons.
+      const layer = o.kind === "point" ? circleId(o.id) : fillId(o.id);
       // Delegated handlers are safe to register before the layer exists; they
       // simply match nothing until the layer is (re)added.
 
@@ -174,13 +269,13 @@ export class OverlayManager {
     const id = f.id ?? 0;
     this.select(overlay, id);
     const p = f.properties ?? {};
-    this.cb.onSelect({
-      overlay,
-      id,
-      name: (p.name as string) ?? "Unknown",
-      region: p.region as string | undefined,
-      district: p.district as string | undefined,
-    });
+    this.cb.onSelect(infoFromProps(overlay, id, p));
+
+    if (getOverlay(overlay).kind === "point") {
+      const coord = pointCoord(f.geometry);
+      if (coord) this.flyToPoint(coord);
+      return;
+    }
     const bbox = this.featureBBox(overlay, id, p.bbox as BBox | string | undefined);
     if (bbox) this.flyToBBox(bbox);
   }
@@ -215,12 +310,23 @@ export class OverlayManager {
     this.map.fitBounds(bounds, { padding: 60, duration: 900, maxZoom: 11 });
   }
 
+  /** Centre on a single point (landforms) at a sensible reveal zoom. */
+  flyToPoint(coord: [number, number]): void {
+    this.map.flyTo({
+      center: coord,
+      zoom: Math.max(this.map.getZoom(), 9),
+      duration: 900,
+    });
+  }
+
   // ── visibility ───────────────────────────────────────────────────────────
   setVisibility(id: OverlayId, on: boolean): void {
     this.visible[id] = on;
     const v = on ? "visible" : "none";
-    if (this.map.getLayer(fillId(id))) this.map.setLayoutProperty(fillId(id), "visibility", v);
-    if (this.map.getLayer(lineId(id))) this.map.setLayoutProperty(lineId(id), "visibility", v);
+    // Toggle whichever layers exist for this overlay (polygon or point pair).
+    for (const lid of [fillId(id), lineId(id), circleId(id), labelId(id)]) {
+      if (this.map.getLayer(lid)) this.map.setLayoutProperty(lid, "visibility", v);
+    }
   }
 
   private applyAllVisibility(): void {
@@ -276,40 +382,70 @@ export class OverlayManager {
 
   /** Look up a feature's display info without selecting or flying. */
   getInfo(overlay: OverlayId, id: string | number): SelectedFeatureInfo | null {
-    const data = this.cache.get(overlay);
-    const feat = data?.features.find((f) => String(f.id) === String(id));
+    const feat = this.findFeature(overlay, id);
     if (!feat) return null;
-    const p = feat.properties;
-    return {
-      overlay,
-      id: feat.id!,
-      name: p.name,
-      region: p.region,
-      district: p.district,
-    };
+    return infoFromProps(overlay, feat.id!, feat.properties as unknown as Record<string, unknown>);
   }
 
-  /** Select + fly to a feature by overlay/id (used when restoring from hash). */
+  /** Select + fly to a feature by overlay/id (also used by the sidebar list). */
   selectAndFly(overlay: OverlayId, id: string | number): SelectedFeatureInfo | null {
-    const data = this.cache.get(overlay);
-    const feat = data?.features.find((f) => String(f.id) === String(id));
+    const feat = this.findFeature(overlay, id);
     if (!feat) return null;
     this.select(overlay, feat.id!);
-    const p = feat.properties;
-    const info: SelectedFeatureInfo = {
-      overlay,
-      id: feat.id!,
-      name: p.name,
-      region: p.region,
-      district: p.district,
-    };
-    const bbox = p.bbox ?? computeBBox(feat.geometry);
-    if (bbox) this.flyToBBox(bbox);
+    const info = infoFromProps(overlay, feat.id!, feat.properties as unknown as Record<string, unknown>);
+
+    if (getOverlay(overlay).kind === "point") {
+      const coord = pointCoord(feat.geometry);
+      if (coord) this.flyToPoint(coord);
+    } else {
+      const bbox = feat.properties.bbox ?? computeBBox(feat.geometry);
+      if (bbox) this.flyToBBox(bbox);
+    }
     return info;
+  }
+
+  private findFeature(overlay: OverlayId, id: string | number) {
+    const data = this.cache.get(overlay);
+    return data?.features.find((f) => String(f.id) === String(id));
   }
 }
 
 // ── helpers ──────────────────────────────────────────────────────────────────
+
+/** Build SelectedFeatureInfo from a feature's properties (string-safe). */
+function infoFromProps(
+  overlay: OverlayId,
+  id: string | number,
+  p: Record<string, unknown> | null
+): SelectedFeatureInfo {
+  const props = p ?? {};
+  const num = (v: unknown): number | undefined =>
+    typeof v === "number" ? v : typeof v === "string" && v !== "" && !isNaN(+v) ? +v : undefined;
+  return {
+    overlay,
+    id,
+    name: (props.name as string) ?? "Unknown",
+    region: props.region as string | undefined,
+    district: props.district as string | undefined,
+    featureType: props.featureType as string | undefined,
+    elevation: num(props.elevation),
+    description: props.description as string | undefined,
+  };
+}
+
+/** First coordinate of a Point/MultiPoint geometry, or null. */
+function pointCoord(geom: GeoJSON.Geometry): [number, number] | null {
+  if (geom.type === "Point") {
+    const [x, y] = geom.coordinates;
+    return [x, y];
+  }
+  if (geom.type === "MultiPoint" && geom.coordinates.length) {
+    const [x, y] = geom.coordinates[0];
+    return [x, y];
+  }
+  return null;
+}
+
 function computeBBox(geom: GeoJSON.Geometry): BBox | null {
   let minX = Infinity,
     minY = Infinity,

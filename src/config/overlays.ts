@@ -14,9 +14,15 @@ export interface OverlayConfig {
   label: string;
   /** Where the GeoJSON is served from (under public/). */
   url: string;
-  /** Fill / outline colour (semi-transparent fill keeps the basemap visible). */
+  /**
+   * How the overlay is rendered. "polygon" → semi-transparent fill + outline
+   * (boundaries). "point" → labelled, coloured markers (landforms/features).
+   * Defaults to "polygon".
+   */
+  kind?: "polygon" | "point";
+  /** Fill / outline / marker colour (semi-transparent fill for polygons). */
   color: string;
-  /** Fill opacity for the resting (non-hovered) state. */
+  /** Fill opacity for the resting (non-hovered) state. Polygons only. */
   fillOpacity: number;
   /** Whether this layer is visible on first load (before URL-hash override). */
   defaultVisible: boolean;
@@ -28,6 +34,25 @@ export interface OverlayConfig {
    */
   licenseWarning?: string;
 }
+
+/**
+ * Marker colours per natural-feature category for the landforms (point)
+ * overlay. Used to build the circle-colour `match` expression.
+ */
+export const LANDFORM_COLORS: Record<string, string> = {
+  peak: "#8c5a2b",
+  massif: "#8c5a2b",
+  plateau: "#b07d3c",
+  highland: "#b07d3c",
+  hills: "#b07d3c",
+  range: "#b07d3c",
+  lake: "#1f78b4",
+  river: "#2c9fb1",
+  wetland: "#2aa17d",
+  park: "#2e8b3d",
+  reserve: "#2e8b3d",
+};
+export const LANDFORM_DEFAULT_COLOR = "#6a737d";
 
 export const OVERLAYS: readonly OverlayConfig[] = [
   {
@@ -64,6 +89,18 @@ export const OVERLAYS: readonly OverlayConfig[] = [
       "Constituency boundary rights must be confirmed before commercial use. " +
       "OpenStreetMap (ODbL, share-alike) or the Malawi Electoral Commission " +
       "(authoritative but unlicensed) are the candidate sources.",
+  },
+  {
+    id: "landforms",
+    label: "Landforms",
+    url: "data/landforms-MWI.geojson",
+    kind: "point",
+    color: "#8c5a2b",
+    fillOpacity: 1, // unused for point markers
+    defaultVisible: true,
+    // Factual place names + coordinates are not copyrightable; curated locally.
+    attribution:
+      'Landforms: curated geographic facts (names &amp; coordinates), public domain',
   },
 ] as const;
 
