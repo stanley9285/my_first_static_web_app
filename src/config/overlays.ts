@@ -33,7 +33,7 @@ export const OVERLAYS: readonly OverlayConfig[] = [
   {
     id: "regions",
     label: "Regions",
-    url: "/data/geoBoundaries-MWI-ADM1.geojson",
+    url: "data/geoBoundaries-MWI-ADM1.geojson",
     color: "#1f78b4",
     fillOpacity: 0.18,
     defaultVisible: true,
@@ -43,7 +43,7 @@ export const OVERLAYS: readonly OverlayConfig[] = [
   {
     id: "districts",
     label: "Districts",
-    url: "/data/geoBoundaries-MWI-ADM2.geojson",
+    url: "data/geoBoundaries-MWI-ADM2.geojson",
     color: "#33a02c",
     fillOpacity: 0.16,
     defaultVisible: false,
@@ -53,7 +53,7 @@ export const OVERLAYS: readonly OverlayConfig[] = [
   {
     id: "constituencies",
     label: "Constituencies",
-    url: "/data/constituencies-MWI.geojson",
+    url: "data/constituencies-MWI.geojson",
     color: "#e31a1c",
     fillOpacity: 0.16,
     defaultVisible: false,

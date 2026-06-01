@@ -4,6 +4,9 @@ import { defineConfig } from "vite";
 // datasets in `public/data/` are fetched at runtime from `/data/*.geojson`.
 export default defineConfig({
   root: ".",
+  // Relative base so the build works under any path — root domain, a GitHub
+  // Pages subpath (/<repo>/), or a sub-folder — without rebuilding.
+  base: "./",
   publicDir: "public",
   build: {
     target: "es2022",
