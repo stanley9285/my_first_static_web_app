@@ -111,12 +111,68 @@ export class PanelUI {
           )
           .join("")}
       </dl>
+      ${info.coord ? this.gpsBlock(info.coord) : ""}
       ${note ? `<p class="detail-note">${escapeHtml(note)}</p>` : ""}
     `;
     card.hidden = false;
     card
       .querySelector("#detail-close")
       ?.addEventListener("click", () => this.handlers.onCloseDetail());
+    this.wireGps(card, info.coord);
+  }
+
+  /** GPS coordinate readout + "Directions" link + copy button (landforms). */
+  private gpsBlock(coord: [number, number]): string {
+    const [lng, lat] = coord;
+    const pretty = formatCoord(lat, lng);
+    // Universal maps links work on desktop and mobile (open the native app
+    // where available). geo: is offered as a device-native fallback.
+    const dir = `https://www.google.com/maps/dir/?api=1&destination=${lat},${lng}`;
+    const view = `https://www.openstreetmap.org/?mlat=${lat}&mlon=${lng}#map=12/${lat}/${lng}`;
+    return `
+      <div class="gps">
+        <div class="gps-row">
+          <span class="gps-label" aria-hidden="true">📍</span>
+          <span class="gps-coords" aria-label="GPS coordinates">${escapeHtml(pretty)}</span>
+          <button type="button" class="gps-copy" data-coord="${lat}, ${lng}"
+            aria-label="Copy coordinates to clipboard">Copy</button>
+        </div>
+        <div class="gps-actions">
+          <a class="gps-btn primary" href="${dir}" target="_blank" rel="noopener"
+            aria-label="Get directions to this location (opens in a new tab)">🧭 Directions</a>
+          <a class="gps-btn" href="${view}" target="_blank" rel="noopener"
+            aria-label="View this location on OpenStreetMap (opens in a new tab)">View map</a>
+        </div>
+      </div>`;
+  }
+
+  private wireGps(card: HTMLElement, coord?: [number, number]): void {
+    if (!coord) return;
+    const btn = card.querySelector<HTMLButtonElement>(".gps-copy");
+    if (!btn) return;
+    btn.addEventListener("click", async () => {
+      const text = btn.dataset.coord ?? "";
+      try {
+        await navigator.clipboard.writeText(text);
+        const prev = btn.textContent;
+        btn.textContent = "Copied ✓";
+        btn.classList.add("copied");
+        window.setTimeout(() => {
+          btn.textContent = prev;
+          btn.classList.remove("copied");
+        }, 1500);
+      } catch {
+        // Clipboard blocked (e.g. insecure context): select the text instead.
+        const sel = card.querySelector(".gps-coords");
+        if (sel) {
+          const range = document.createRange();
+          range.selectNodeContents(sel);
+          const s = window.getSelection();
+          s?.removeAllRanges();
+          s?.addRange(range);
+        }
+      }
+    });
   }
 
   clearDetail(): void {
@@ -276,4 +332,11 @@ const SINGULAR: Record<OverlayId, string> = {
 
 function capitalize(s: string): string {
   return s.charAt(0).toUpperCase() + s.slice(1);
+}
+
+/** Human-readable DMS-style decimal coordinate, e.g. "15.9500° S, 35.6100° E". */
+function formatCoord(lat: number, lng: number): string {
+  const ns = lat >= 0 ? "N" : "S";
+  const ew = lng >= 0 ? "E" : "W";
+  return `${Math.abs(lat).toFixed(4)}° ${ns}, ${Math.abs(lng).toFixed(4)}° ${ew}`;
 }
