@@ -1,0 +1,37 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0" />
+    <meta name="color-scheme" content="light dark" />
+    <title>Malawi Interactive Map</title>
+    <meta
+      name="description"
+      content="Interactive map of Malawi — street basemap with toggleable region, district and constituency boundary overlays."
+    />
+  </head>
+  <body>
+    <!-- App shell. The map fills the viewport; the side panel and controls
+         float above it. Built imperatively in src/main.ts. -->
+    <div id="app">
+      <main id="map" role="application" aria-label="Interactive map of Malawi"></main>
+
+      <!-- Top-left: basemap style + terrain + reset controls -->
+      <div id="map-controls" class="panel-controls" aria-label="Map controls"></div>
+
+      <!-- Right: overlay tabs + detail card -->
+      <aside id="sidebar" aria-label="Boundary overlays and details"></aside>
+
+      <!-- Global, non-blocking status/error toaster -->
+      <div id="toast" role="status" aria-live="polite" hidden></div>
+    </div>
+
+    <noscript>
+      <p style="padding: 1rem; font-family: system-ui, sans-serif">
+        This interactive map requires JavaScript to be enabled.
+      </p>
+    </noscript>
+
+    <script type="module" src="/src/main.ts"></script>
+  </body>
+</html>

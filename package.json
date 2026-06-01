@@ -1,7 +1,22 @@
 {
-  "name": "vanilla-basic",
+  "name": "malawi-interactive-map",
   "version": "1.0.0",
-  "scripts": { 
-    "start": "sirv ./src public --cors --single --no-clear --port 8000"
+  "description": "Production-grade interactive web map of Malawi (MapLibre GL JS) with a commercial-use-safe tiled basemap and toggleable boundary overlays (regions, districts, constituencies).",
+  "license": "MIT",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc --noEmit && vite build",
+    "preview": "vite preview",
+    "typecheck": "tsc --noEmit",
+    "data:build": "node scripts/build-data.mjs"
+  },
+  "dependencies": {
+    "maplibre-gl": "^4.7.1"
+  },
+  "devDependencies": {
+    "@turf/turf": "^7.1.0",
+    "typescript": "^5.6.3",
+    "vite": "^5.4.11"
   }
 }
