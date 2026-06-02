@@ -15,7 +15,8 @@ street/terrain/label detail and toggleable political boundary overlays —
 
 - **Continuous vector basemap** (OpenFreeMap) — pan/zoom to street level with
   labels that scale naturally; no custom label management.
-- **Style switcher** — Streets, Light/Minimal, Terrain.
+- **Style switcher** — Streets, Light/Minimal, Terrain, and **Satellite**
+  (EOX Sentinel-2 cloudless, commercial-use-safe).
 - **3D terrain toggle** — MapLibre terrain mesh + hillshade from a Terrarium DEM.
 - **Five independent overlay tabs** — Regions, Districts, Constituencies,
   **Landforms** (notable natural features: peaks, plateaus, lakes, rivers,
@@ -141,6 +142,22 @@ visible.
   OpenFreeMap (both shown in the attribution control). OpenFreeMap's public
   instance has **no SLA** — for commercial scale, self-host (see Protomaps
   migration below).
+
+### Satellite imagery — EOX Sentinel-2 cloudless
+
+- **Source:** EOX "Sentinel-2 cloudless" — a global cloud-free mosaic derived
+  from ESA Copernicus Sentinel-2 data (`https://s2maps.eu`), ~10 m resolution.
+- **License:** **CC-BY 4.0** — commercial use permitted **with attribution**.
+  (Deliberately *not* Google/Mapbox/Bing/Esri imagery, which is not free for
+  commercial use — the same licensing trap as Mapbox GL.)
+- **Obligation:** credit "Sentinel-2 cloudless by EOX IT Services GmbH
+  (contains modified Copernicus Sentinel data)" — shown in the attribution
+  control when the Satellite style is active.
+- **`// VERIFY:`** The imagery is CC-BY 4.0, but the **public EOX tile service
+  has fair-use limits**. For commercial scale, self-host the (freely
+  downloadable) Sentinel-2 cloudless tiles or arrange capacity with EOX, and
+  update the `tiles` URL in `src/config/basemap.ts`. ~10 m suits regional views;
+  for building-level detail, licence a commercial high-res provider.
 
 ### Terrain DEM — AWS Terrain Tiles (Terrarium)
 
