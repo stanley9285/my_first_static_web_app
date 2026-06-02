@@ -8,7 +8,7 @@ import type { Map as MLMap } from "maplibre-gl";
 
 import { store } from "./state";
 import type { OverlayId } from "./types";
-import { getStyle } from "./config/basemap";
+import { getStyle, buildHybridSatellite } from "./config/basemap";
 import { createMap, flyHome } from "./map/mapInit";
 import { applyTerrain } from "./map/terrain";
 import { OverlayManager, type SelectedFeatureInfo } from "./map/overlays";
@@ -94,6 +94,25 @@ function bootstrap(): void {
     store.set({ selected: `${info.overlay}:${info.id}` });
   }
 
+  // Apply a basemap style. Satellite is resolved asynchronously into a hybrid
+  // (imagery + OpenFreeMap labels/roads/POIs); on failure we fall back to
+  // imagery-only so the map never breaks. A style swap wipes user sources, so
+  // refreshMap re-adds overlays/terrain/vehicles once the new style is ready.
+  async function applyStyle(styleId: string): Promise<void> {
+    styleReady = false;
+    if (styleId === "satellite") {
+      try {
+        map.setStyle(await buildHybridSatellite());
+        return;
+      } catch (err) {
+        // eslint-disable-next-line no-console
+        console.warn("Hybrid satellite unavailable, using imagery only:", err);
+        toast("Satellite labels unavailable — showing imagery only.", "error", 4000);
+      }
+    }
+    map.setStyle(getStyle(styleId).style);
+  }
+
   // ── Live goods-vehicle tracking (demo feed in the default build) ─────────────
   const vehicleLayer = new VehicleLayer(map, (v) => panel.showVehicleDetail(v));
   let feed: VehicleFeed | null = null;
@@ -139,10 +158,7 @@ function bootstrap(): void {
   renderControls(controlsEl, {
     onStyleChange: (styleId) => {
       store.set({ style: styleId });
-      styleReady = false;
-      // Swapping the style wipes user sources/layers; refreshMap re-adds them
-      // once the new style reports ready.
-      map.setStyle(getStyle(styleId).style);
+      void applyStyle(styleId);
     },
     onTerrainToggle: (on) => {
       store.set({ terrain: on });
@@ -192,6 +208,10 @@ function bootstrap(): void {
     styleReady = true;
     refreshMap();
   });
+
+  // If satellite was the persisted style, the map booted with imagery-only
+  // (synchronous fallback); upgrade it to the hybrid (imagery + labels/roads).
+  if (initial.style === "satellite") void applyStyle("satellite");
 
   // Graceful failure: surface tile/source errors without crashing.
   map.on("error", (e) => {

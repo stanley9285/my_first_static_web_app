@@ -47,7 +47,7 @@ export interface BasemapStyle {
 }
 
 /**
- * Satellite basemap — EOX Sentinel-2 cloudless.
+ * Satellite basemap — EOX Sentinel-2 cloudless, as a HYBRID.
  *
  * Commercial-use-safe satellite imagery is the same trap as the Mapbox-GL one:
  * Google / Mapbox / Bing / Esri imagery is NOT free for commercial use. The
@@ -56,10 +56,13 @@ export interface BasemapStyle {
  * (~10 m resolution). Attribution is a licence requirement and is carried on
  * the raster source below (shown in the AttributionControl when active).
  *
- * The style is inline (a raster source + a vector glyphs endpoint so our
- * overlay labels — landform names, road refs, vehicle plates — still render
- * over the imagery). Our overlays/terrain/vehicles are re-added on style.load,
- * so they appear on top of the satellite layer automatically.
+ * Two forms:
+ *   • SATELLITE_STYLE — a minimal imagery-only style (synchronous fallback).
+ *   • buildHybridSatellite() — fetches OpenFreeMap's full vector style, drops
+ *     its opaque land fills so the imagery shows through, and keeps its road
+ *     LINES, place LABELS and POI/tourist SYMBOLS on top of the raster. This is
+ *     what the app uses, so the satellite view still shows locations, roads and
+ *     tourist attractions (from OpenStreetMap), plus our own overlays.
  *
  * // VERIFY: Confirm the EOX tile endpoint's terms before commercial launch.
  * // The IMAGERY is CC-BY 4.0, but the public EOX tile *service* has fair-use
@@ -69,28 +72,62 @@ export interface BasemapStyle {
  * // detail you'd license a commercial high-res provider (e.g. Maxar/Esri).
  */
 const SENTINEL2_YEAR = 2020;
+const LIBERTY_STYLE_URL = "https://tiles.openfreemap.org/styles/liberty";
+
+function eoxRasterSource() {
+  return {
+    type: "raster" as const,
+    tiles: [
+      `https://tiles.maps.eox.at/wmts/1.0.0/s2cloudless-${SENTINEL2_YEAR}_3857/default/g/{z}/{y}/{x}.jpg`,
+    ],
+    tileSize: 256,
+    maxzoom: 16,
+    attribution:
+      'Imagery: <a href="https://s2maps.eu" target="_blank" rel="noopener">Sentinel-2 cloudless</a> ' +
+      `by EOX IT Services GmbH (contains modified Copernicus Sentinel data ${SENTINEL2_YEAR}) — CC-BY 4.0`,
+  };
+}
+
 const SATELLITE_STYLE: StyleSpecification = {
   version: 8,
   // Glyphs so symbol layers (our overlay labels) can render text over imagery.
   glyphs: "https://tiles.openfreemap.org/fonts/{fontstack}/{range}.pbf",
-  sources: {
-    "eox-s2cloudless": {
-      type: "raster",
-      tiles: [
-        `https://tiles.maps.eox.at/wmts/1.0.0/s2cloudless-${SENTINEL2_YEAR}_3857/default/g/{z}/{y}/{x}.jpg`,
-      ],
-      tileSize: 256,
-      maxzoom: 16,
-      attribution:
-        'Imagery: <a href="https://s2maps.eu" target="_blank" rel="noopener">Sentinel-2 cloudless</a> ' +
-        `by EOX IT Services GmbH (contains modified Copernicus Sentinel data ${SENTINEL2_YEAR}) — CC-BY 4.0`,
-    },
-  },
+  sources: { "eox-s2cloudless": eoxRasterSource() },
   layers: [
     { id: "bg", type: "background", paint: { "background-color": "#0a1626" } },
     { id: "eox-s2cloudless", type: "raster", source: "eox-s2cloudless" },
   ],
 };
+
+/**
+ * Build the hybrid satellite style: OpenFreeMap labels/roads/POIs over imagery.
+ * Fetches the Liberty vector style, splices the EOX raster in at the bottom, and
+ * removes the opaque area fills (landcover/landuse/water/buildings/hillshade)
+ * that would otherwise hide the imagery — keeping line + symbol layers so place
+ * names, roads, boundaries and tourist POIs remain visible on the satellite.
+ *
+ * Throws on network/parse failure; the caller falls back to SATELLITE_STYLE.
+ */
+export async function buildHybridSatellite(): Promise<StyleSpecification> {
+  const res = await fetch(LIBERTY_STYLE_URL, { cache: "no-cache" });
+  if (!res.ok) throw new Error(`Liberty style HTTP ${res.status}`);
+  const base = (await res.json()) as StyleSpecification;
+
+  base.sources = { ...base.sources, "eox-s2cloudless": eoxRasterSource() };
+
+  // Keep only line + symbol layers (roads, boundaries, labels, POIs). Drop the
+  // opaque fills so the imagery underneath shows through.
+  const overlayLayers = base.layers.filter(
+    (l) => l.type === "line" || l.type === "symbol"
+  );
+
+  base.layers = [
+    { id: "sat-bg", type: "background", paint: { "background-color": "#0a1626" } },
+    { id: "eox-s2cloudless", type: "raster", source: "eox-s2cloudless" },
+    ...overlayLayers,
+  ];
+  return base;
+}
 
 /**
  * Street / Light / Terrain / Satellite basemaps.

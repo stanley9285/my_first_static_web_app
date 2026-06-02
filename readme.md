@@ -16,7 +16,8 @@ street/terrain/label detail and toggleable political boundary overlays —
 - **Continuous vector basemap** (OpenFreeMap) — pan/zoom to street level with
   labels that scale naturally; no custom label management.
 - **Style switcher** — Streets, Light/Minimal, Terrain, and **Satellite**
-  (EOX Sentinel-2 cloudless, commercial-use-safe).
+  (EOX Sentinel-2 cloudless, commercial-use-safe). Satellite is a **hybrid**:
+  imagery with OpenStreetMap place names, roads and tourist POIs kept on top.
 - **3D terrain toggle** — MapLibre terrain mesh + hillshade from a Terrarium DEM.
 - **Five independent overlay tabs** — Regions, Districts, Constituencies,
   **Landforms** (notable natural features: peaks, plateaus, lakes, rivers,
@@ -147,6 +148,11 @@ visible.
 
 - **Source:** EOX "Sentinel-2 cloudless" — a global cloud-free mosaic derived
   from ESA Copernicus Sentinel-2 data (`https://s2maps.eu`), ~10 m resolution.
+- **Hybrid:** the Satellite view keeps OpenStreetMap labels, roads, boundaries
+  and tourist POIs on top of the imagery (built at runtime from the OpenFreeMap
+  Liberty style with its land fills removed — see `buildHybridSatellite` in
+  `src/config/basemap.ts`). If that style can't be fetched, it falls back to
+  imagery-only without breaking.
 - **License:** **CC-BY 4.0** — commercial use permitted **with attribution**.
   (Deliberately *not* Google/Mapbox/Bing/Esri imagery, which is not free for
   commercial use — the same licensing trap as Mapbox GL.)
