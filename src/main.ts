@@ -12,6 +12,8 @@ import { getStyle } from "./config/basemap";
 import { createMap, flyHome } from "./map/mapInit";
 import { applyTerrain } from "./map/terrain";
 import { OverlayManager, type SelectedFeatureInfo } from "./map/overlays";
+import { VehicleLayer } from "./map/vehicles";
+import { createDemoFeed, type VehicleFeed } from "./data/vehicles";
 import { loadConstituencies } from "./data/constituencies";
 import { renderControls } from "./ui/controls";
 import { PanelUI } from "./ui/panel";
@@ -92,7 +94,48 @@ function bootstrap(): void {
     store.set({ selected: `${info.overlay}:${info.id}` });
   }
 
-  // ── Controls (style switcher / terrain / reset) ──────────────────────────────
+  // ── Live goods-vehicle tracking (demo feed in the default build) ─────────────
+  const vehicleLayer = new VehicleLayer(map, (v) => panel.showVehicleDetail(v));
+  let feed: VehicleFeed | null = null;
+  let unsubscribeFeed: (() => void) | null = null;
+
+  function setTracking(on: boolean): void {
+    store.set({ tracking: on });
+    if (on) {
+      vehicleLayer.setVisible(true);
+      startFeed();
+    } else {
+      stopFeed();
+      vehicleLayer.clear();
+      vehicleLayer.setVisible(false);
+    }
+  }
+
+  function startFeed(): void {
+    if (!dataLoaded) return; // roads needed; will be started after data loads
+    if (!feed) {
+      const roads = overlays.getData("roads");
+      if (!roads) {
+        toast("Tracking demo needs the freight-roads data (unavailable).", "error");
+        return;
+      }
+      // SWAP-IN POINT: replace createDemoFeed(roads) with your real feed, e.g.
+      //   feed = createLiveFeed({ url: "wss://…", token: "…" });
+      feed = createDemoFeed(roads);
+      unsubscribeFeed = feed.subscribe((vehicles) => vehicleLayer.update(vehicles));
+    }
+    vehicleLayer.ensure();
+    feed.start();
+  }
+
+  function stopFeed(): void {
+    feed?.stop();
+    unsubscribeFeed?.();
+    unsubscribeFeed = null;
+    feed = null;
+  }
+
+  // ── Controls (style switcher / terrain / tracking / reset) ───────────────────
   renderControls(controlsEl, {
     onStyleChange: (styleId) => {
       store.set({ style: styleId });
@@ -105,6 +148,7 @@ function bootstrap(): void {
       store.set({ terrain: on });
       applyTerrain(map, on);
     },
+    onTrackingToggle: (on) => setTracking(on),
     onHome: () => {
       overlays.clearSelection();
       panel.clearDetail();
@@ -119,6 +163,10 @@ function bootstrap(): void {
     if (!styleReady) return;
     applyTerrain(map, store.get().terrain);
     overlays.addAllToMap();
+    // Vehicle layers/icon are wiped by a style swap too — re-create them and
+    // re-apply current visibility/data on top of the overlays.
+    vehicleLayer.ensure();
+    vehicleLayer.setVisible(store.get().tracking);
     restoreSelection();
   }
 
@@ -176,6 +224,10 @@ function bootstrap(): void {
     await overlays.loadAll();
     dataLoaded = true;
     refreshMap();
+
+    // If tracking was on before a refresh, start the (demo) feed now that the
+    // roads data — which the simulation drives vehicles along — is available.
+    if (store.get().tracking) startFeed();
 
     // Surface the constituency scaffold state explicitly.
     const con = await loadConstituencies();

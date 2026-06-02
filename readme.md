@@ -17,12 +17,19 @@ street/terrain/label detail and toggleable political boundary overlays —
   labels that scale naturally; no custom label management.
 - **Style switcher** — Streets, Light/Minimal, Terrain.
 - **3D terrain toggle** — MapLibre terrain mesh + hillshade from a Terrarium DEM.
-- **Four independent overlay tabs** — Regions, Districts, Constituencies, and
+- **Five independent overlay tabs** — Regions, Districts, Constituencies,
   **Landforms** (notable natural features: peaks, plateaus, lakes, rivers,
-  wetlands and protected areas, shown as labelled, colour-coded markers).
-  Boundaries render as semi-transparent fills + outlines so the basemap stays
-  visible; hover highlight + name tooltip; click flies to the feature and opens
-  a detail card.
+  wetlands and protected areas, as labelled colour-coded markers with GPS
+  coordinates + directions), and **Freight roads** (Malawi's main goods
+  corridors — M1 spine, M5 lakeshore, M3, M6, plus the Beira/Nacala export
+  links — as cased, labelled lines). Boundaries render as semi-transparent
+  fills + outlines so the basemap stays visible; hover highlight + name
+  tooltip; click flies to the feature and opens a detail card.
+- **Live goods-vehicle tracking** — a toggleable layer that plots tracked
+  vehicles as status-coloured, heading-oriented markers, fed through a clean
+  `VehicleFeed` interface. The default build ships a clearly-labelled **demo**
+  that simulates trucks moving along the freight corridors; point it at your
+  real GPS/telematics feed for production (see below).
 - **State survives refresh** — active style, terrain, layer visibility, tab,
   camera, and selection are all encoded in the URL hash (shareable links).
 - **Always-on attribution**, **keyboard-accessible** controls (ARIA), responsive
@@ -62,10 +69,12 @@ src/
   map/
     mapInit.ts             Map creation + attribution/nav/scale controls
     terrain.ts             3D terrain + hillshade toggle
-    overlays.ts            Overlay rendering, hover, click, fly-to, selection
+    overlays.ts            Overlay rendering (polygon/point/line), interactions
+    vehicles.ts            Vehicle marker rendering (status colour + heading)
   data/
     loader.ts              Typed, never-throws GeoJSON loader (graceful fail)
     constituencies.ts      Licence-aware constituency loader interface
+    vehicles.ts            VehicleFeed interface + live-feed scaffold + demo
   ui/
     controls.ts            Style switcher / terrain / reset
     panel.ts               Tabs, toggles, feature list, detail card
@@ -77,6 +86,7 @@ public/data/               Local datasets served at /data/*.geojson
   geoBoundaries-MWI-ADM2.geojson    28 districts (+ parent region)
   constituencies-MWI.geojson        scaffold (empty — see below)
   landforms-MWI.geojson             29 curated natural features (points)
+  roads-MWI.geojson                 6 freight corridors (simplified lines)
   SOURCES.md               Per-file provenance + refresh instructions
 ```
 
@@ -88,6 +98,7 @@ public/data/               Local datasets served at /data/*.geojson
 | Districts (28) | `public/data/geoBoundaries-MWI-ADM2.geojson` | geoBoundaries gbOpen ADM2 | CC-BY 4.0 |
 | Constituencies | `public/data/constituencies-MWI.geojson` | **not bundled** (scaffold) | **unconfirmed** |
 | Landforms (29) | `public/data/landforms-MWI.geojson` | curated geographic facts | public domain (facts) |
+| Freight roads (6) | `public/data/roads-MWI.geojson` | curated simplified corridors | curated; **not lane-accurate** |
 
 `npm run data:build` (see `scripts/build-data.mjs`) downloads the geoBoundaries
 ADM1/ADM2 GeoJSON straight from the geoBoundaries release data on GitHub,
@@ -165,6 +176,40 @@ visible.
   (`metadata.featureSchema` in the file; `level: "landform"`, `featureType`,
   optional `elevation`/`region`/`description`; Point geometry). No code change
   is needed — the loader and the labelled point layer pick them up.
+
+### Freight roads & vehicle tracking
+
+- **Roads source:** a small **curated** set of Malawi's primary goods-transport
+  corridors (M1 north–south spine, M5 lakeshore, M3, M6, plus the Beira and
+  Nacala export-corridor border links), stored at `public/data/roads-MWI.geojson`.
+- **License:** road **references and town locations are factual** (not
+  copyrightable); the geometry is **simplified centreline routing**, authored
+  locally — commercial-use-safe as an overview.
+- **⚠ Accuracy caveat:** this geometry is a **corridor overview, NOT
+  lane-accurate**. It is fine for highlighting routes and for a tracking demo,
+  but **it cannot be used to map-match / snap real vehicle GPS positions to the
+  correct lane**. For production tracking you need a **licensed road network**
+  — OpenStreetMap (**ODbL**, share-alike + attribution) or a **commercial road
+  dataset** — plus a routing/map-matching engine (e.g. Valhalla, OSRM, GraphHopper).
+
+#### Wiring a real GPS feed (production)
+
+The app consumes vehicle positions **only** through the `VehicleFeed` interface
+in `src/data/vehicles.ts`, so swapping the demo for a live feed is a one-line
+change in `src/main.ts`:
+
+```ts
+// main.ts — replace the demo with your telematics source:
+feed = createLiveFeed({ url: "wss://gps.example.com/stream", token: "…" });
+```
+
+Implement `createLiveFeed` to open your WebSocket/MQTT stream (or poll a REST
+endpoint), map each provider record onto the `VehiclePosition` shape
+(`id, plate, lng, lat, heading, speedKmh, status, cargo?, road?, updatedAt`),
+and emit batches to subscribers. Nothing in the map/UI layer changes. The
+default build's demo feed (`createDemoFeed`) animates simulated trucks along the
+corridors purely to showcase the capability — it is clearly badged **DEMO** in
+the UI and ships no data masquerading as real tracking.
 
 ### Constituencies — ⚠ RIGHTS NOT CONFIRMED, DO NOT SHIP COMMERCIALLY YET
 

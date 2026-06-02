@@ -6,7 +6,7 @@
  * Pure DOM (no framework). Communicates with the app via callbacks.
  */
 
-import type { OverlayCollection, OverlayId } from "../types";
+import type { OverlayCollection, OverlayId, VehiclePosition } from "../types";
 import { OVERLAYS, getOverlay } from "../config/overlays";
 import type { SelectedFeatureInfo } from "../map/overlays";
 
@@ -34,6 +34,7 @@ export class PanelUI {
     districts: { loaded: false },
     constituencies: { loaded: false },
     landforms: { loaded: false },
+    roads: { loaded: false },
   };
   private data: Partial<Record<OverlayId, OverlayCollection>> = {};
 
@@ -87,6 +88,18 @@ export class PanelUI {
         rows.push(["Elevation", `${info.elevation.toLocaleString()} m`]);
       }
       if (info.description) note = info.description;
+    } else if (info.overlay === "roads") {
+      // Freight corridor: ref, corridor served, endpoints, surface, length.
+      if (info.ref) rows.push(["Road", info.ref]);
+      if (info.corridor) rows.push(["Corridor", info.corridor]);
+      if (info.from && info.to) rows.push(["Route", `${info.from} → ${info.to}`]);
+      if (info.surface) rows.push(["Surface", capitalize(info.surface)]);
+      if (typeof info.lengthKm === "number") {
+        rows.push(["Length", `≈ ${info.lengthKm.toLocaleString()} km`]);
+      }
+      note =
+        "Simplified corridor overview — not lane-accurate. For GPS map-matching, " +
+        "use a licensed road network (see README).";
     } else {
       // Administrative boundary: type + parents + placeholder stat fields.
       rows.push(["Type", SINGULAR[info.overlay]]);
@@ -181,6 +194,43 @@ export class PanelUI {
       card.hidden = true;
       card.innerHTML = "";
     }
+  }
+
+  /** Detail card for a tracked goods vehicle. */
+  showVehicleDetail(v: VehiclePosition): void {
+    const card = this.root.querySelector<HTMLElement>("#detail-card");
+    if (!card) return;
+    const statusColor: Record<VehiclePosition["status"], string> = {
+      moving: "#1a9850",
+      idle: "#f1c40f",
+      stopped: "#999999",
+      loading: "#3498db",
+    };
+    const rows: Array<[string, string]> = [
+      ["Status", capitalize(v.status)],
+      ["Speed", `${Math.round(v.speedKmh)} km/h`],
+      ["Heading", `${Math.round(v.heading)}°`],
+    ];
+    if (v.cargo) rows.push(["Cargo", v.cargo]);
+    if (v.road) rows.push(["On corridor", v.road]);
+    rows.push(["Updated", new Date(v.updatedAt).toLocaleTimeString()]);
+
+    card.innerHTML = `
+      <div class="detail-head" style="border-color:${statusColor[v.status]}">
+        <h3>🚚 ${escapeHtml(v.plate)}</h3>
+        <button type="button" id="detail-close" aria-label="Close details">✕</button>
+      </div>
+      <dl class="detail-grid">
+        ${rows
+          .map(([k, val]) => `<dt>${escapeHtml(k)}</dt><dd>${escapeHtml(val)}</dd>`)
+          .join("")}
+      </dl>
+      <p class="detail-note">Live goods-vehicle tracking. Demo positions in the default build — wire a real GPS feed in src/data/vehicles.ts.</p>
+    `;
+    card.hidden = false;
+    card
+      .querySelector("#detail-close")
+      ?.addEventListener("click", () => this.handlers.onCloseDetail());
   }
 
   // ── rendering ───────────────────────────────────────────────────────────────
@@ -328,6 +378,7 @@ const SINGULAR: Record<OverlayId, string> = {
   districts: "District",
   constituencies: "Constituency",
   landforms: "Landform",
+  roads: "Road",
 };
 
 function capitalize(s: string): string {
