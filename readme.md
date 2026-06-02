@@ -86,7 +86,7 @@ public/data/               Local datasets served at /data/*.geojson
   geoBoundaries-MWI-ADM2.geojson    28 districts (+ parent region)
   constituencies-MWI.geojson        scaffold (empty — see below)
   landforms-MWI.geojson             29 curated natural features (points)
-  roads-MWI.geojson                 6 freight corridors (simplified lines)
+  roads-MWI.geojson                 11 goods routes incl. borders (lines)
   SOURCES.md               Per-file provenance + refresh instructions
 ```
 
@@ -98,7 +98,7 @@ public/data/               Local datasets served at /data/*.geojson
 | Districts (28) | `public/data/geoBoundaries-MWI-ADM2.geojson` | geoBoundaries gbOpen ADM2 | CC-BY 4.0 |
 | Constituencies | `public/data/constituencies-MWI.geojson` | **not bundled** (scaffold) | **unconfirmed** |
 | Landforms (29) | `public/data/landforms-MWI.geojson` | curated geographic facts | public domain (facts) |
-| Freight roads (6) | `public/data/roads-MWI.geojson` | curated simplified corridors | curated; **not lane-accurate** |
+| Roads (11) | `public/data/roads-MWI.geojson` | curated simplified routes | curated; **not lane-accurate** |
 
 `npm run data:build` (see `scripts/build-data.mjs`) downloads the geoBoundaries
 ADM1/ADM2 GeoJSON straight from the geoBoundaries release data on GitHub,
@@ -179,9 +179,14 @@ visible.
 
 ### Freight roads & vehicle tracking
 
-- **Roads source:** a small **curated** set of Malawi's primary goods-transport
-  corridors (M1 north–south spine, M5 lakeshore, M3, M6, plus the Beira and
-  Nacala export-corridor border links), stored at `public/data/roads-MWI.geojson`.
+- **Roads source:** a **curated** set of the main roads used for transporting
+  goods, stored at `public/data/roads-MWI.geojson` — currently the M1 north–south
+  spine, the M5 lakeshore road, Blantyre–Mangochi (via Zomba & Liwonde),
+  Blantyre–Mulanje–Muloza, Lilongwe–Mchinji (Mwami/Zambia), Lilongwe–Salima,
+  Karonga–Chitipa, Dedza–Mozambique, Blantyre–Mwanza (Beira), and the
+  Liwonde/Mangochi–Namwera–Chiponde routes (Nacala). The `ref` is the official
+  road number where confident (e.g. M1, M5) and a **route label** otherwise
+  (e.g. `LL–Mchinji`) — **verify/replace the official M-numbers before launch.**
 - **License:** road **references and town locations are factual** (not
   copyrightable); the geometry is **simplified centreline routing**, authored
   locally — commercial-use-safe as an overview.
