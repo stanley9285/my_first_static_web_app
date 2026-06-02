@@ -15,9 +15,12 @@ street/terrain/label detail and toggleable political boundary overlays —
 
 - **Continuous vector basemap** (OpenFreeMap) — pan/zoom to street level with
   labels that scale naturally; no custom label management.
-- **Style switcher** — Streets, Light/Minimal, Terrain, and **Satellite**
-  (EOX Sentinel-2 cloudless, commercial-use-safe). Satellite is a **hybrid**:
-  imagery with OpenStreetMap place names, roads and tourist POIs kept on top.
+- **Style switcher** — Streets, Light/Minimal, Terrain, and two **hybrid
+  Satellite** options (imagery with OpenStreetMap place names, roads and tourist
+  POIs kept on top): **Satellite (HD)** = high-resolution Esri imagery
+  (houses/footpaths clearly visible; licence review needed for commercial use),
+  and **Satellite (open)** = EOX Sentinel-2 cloudless (CC-BY 4.0, commercial-
+  clean, but ~10 m so coarser).
 - **3D terrain toggle** — MapLibre terrain mesh + hillshade from a Terrarium DEM.
 - **Five independent overlay tabs** — Regions, Districts, Constituencies,
   **Landforms** (notable natural features: peaks, plateaus, lakes, rivers,
@@ -144,15 +147,30 @@ visible.
   instance has **no SLA** — for commercial scale, self-host (see Protomaps
   migration below).
 
-### Satellite imagery — EOX Sentinel-2 cloudless
+### Satellite imagery — two options (both hybrids)
 
-- **Source:** EOX "Sentinel-2 cloudless" — a global cloud-free mosaic derived
-  from ESA Copernicus Sentinel-2 data (`https://s2maps.eu`), ~10 m resolution.
-- **Hybrid:** the Satellite view keeps OpenStreetMap labels, roads, boundaries
-  and tourist POIs on top of the imagery (built at runtime from the OpenFreeMap
-  Liberty style with its land fills removed — see `buildHybridSatellite` in
-  `src/config/basemap.ts`). If that style can't be fetched, it falls back to
-  imagery-only without breaking.
+Both Satellite styles keep OpenStreetMap labels, roads, boundaries and tourist
+POIs on top of the imagery (built at runtime from the OpenFreeMap Liberty style
+with its land fills removed — see `buildHybridSatellite` in
+`src/config/basemap.ts`). If that vector style can't be fetched, they fall back
+to imagery-only without breaking.
+
+**Satellite (HD) — Esri World Imagery**
+- **Source:** Esri World Imagery (`server.arcgisonline.com`), high resolution
+  (sub-metre in many areas) — houses, footpaths and roads are clearly visible.
+- **License:** ⚠ **not as clean as CC-BY.** Esri imagery is free for many uses,
+  but **commercial use/redistribution may require an Esri/ArcGIS agreement** —
+  **review the Esri licence before commercial launch** (this is the high-res vs.
+  licensing trade-off; see `// VERIFY` in `src/config/basemap.ts`).
+
+**Satellite (open) — EOX Sentinel-2 cloudless**
+- **Source:** EOX "Sentinel-2 cloudless" (`https://s2maps.eu`), ~10 m resolution.
+- **License:** **CC-BY 4.0** — commercial-use-safe with attribution. Coarser:
+  good for terrain/landscape/regional context, **cannot resolve houses or
+  footpaths** (that is a hard limit of ~10 m imagery — use the HD option, or a
+  licensed high-res provider such as Maxar/Esri, for building-level detail).
+- **`// VERIFY:`** public EOX tile service has fair-use limits; self-host the
+  (freely downloadable) tiles for commercial scale.
 - **License:** **CC-BY 4.0** — commercial use permitted **with attribution**.
   (Deliberately *not* Google/Mapbox/Bing/Esri imagery, which is not free for
   commercial use — the same licensing trap as Mapbox GL.)

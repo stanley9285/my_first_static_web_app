@@ -100,17 +100,18 @@ function bootstrap(): void {
   // refreshMap re-adds overlays/terrain/vehicles once the new style is ready.
   async function applyStyle(styleId: string): Promise<void> {
     styleReady = false;
-    if (styleId === "satellite") {
+    const cfg = getStyle(styleId);
+    if (cfg.hybrid) {
       try {
-        map.setStyle(await buildHybridSatellite());
+        map.setStyle(await buildHybridSatellite(cfg.hybrid));
         return;
       } catch (err) {
         // eslint-disable-next-line no-console
         console.warn("Hybrid satellite unavailable, using imagery only:", err);
-        toast("Satellite labels unavailable — showing imagery only.", "error", 4000);
+        toast("Map labels unavailable — showing imagery only.", "error", 4000);
       }
     }
-    map.setStyle(getStyle(styleId).style);
+    map.setStyle(cfg.style);
   }
 
   // ── Live goods-vehicle tracking (demo feed in the default build) ─────────────
@@ -209,9 +210,9 @@ function bootstrap(): void {
     refreshMap();
   });
 
-  // If satellite was the persisted style, the map booted with imagery-only
+  // If a hybrid satellite style was persisted, the map booted with imagery-only
   // (synchronous fallback); upgrade it to the hybrid (imagery + labels/roads).
-  if (initial.style === "satellite") void applyStyle("satellite");
+  if (getStyle(initial.style).hybrid) void applyStyle(initial.style);
 
   // Graceful failure: surface tile/source errors without crashing.
   map.on("error", (e) => {
