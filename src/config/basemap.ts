@@ -33,6 +33,9 @@
 
 import type { StyleSpecification } from "maplibre-gl";
 
+/** Imagery providers usable for a hybrid satellite basemap. */
+export type SatelliteProvider = "esri" | "sentinel2";
+
 /** A basemap option shown in the style switcher. */
 export interface BasemapStyle {
   /** Stable key persisted in the URL hash. */
@@ -42,8 +45,12 @@ export interface BasemapStyle {
   /**
    * Either a style-JSON URL (string) or an inline StyleSpecification.
    * Routing both through one type is what makes the Protomaps swap trivial.
+   * For hybrid satellite styles this is the synchronous imagery-only fallback;
+   * the app upgrades it to a labelled hybrid via `buildHybridSatellite`.
    */
   style: string | StyleSpecification;
+  /** If set, this is a satellite style; build the hybrid with this provider. */
+  hybrid?: SatelliteProvider;
 }
 
 /**
@@ -73,8 +80,33 @@ export interface BasemapStyle {
  */
 const SENTINEL2_YEAR = 2020;
 const LIBERTY_STYLE_URL = "https://tiles.openfreemap.org/styles/liberty";
+const SAT_SOURCE_ID = "satellite-imagery";
 
-function eoxRasterSource() {
+/**
+ * Raster imagery source per provider.
+ *  • esri      — Esri World Imagery: HIGH RESOLUTION (sub-metre in many areas),
+ *                so houses/footpaths/roads are clearly visible. // VERIFY:
+ *                Esri's terms are NOT as clean as CC-BY — review the Esri
+ *                licence before commercial use (free for many uses; commercial
+ *                redistribution may need an ArcGIS/Esri agreement).
+ *  • sentinel2 — EOX Sentinel-2 cloudless: ~10 m, COMMERCIAL-CLEAN (CC-BY 4.0)
+ *                but too coarse to resolve houses/footpaths. // VERIFY: public
+ *                EOX tile service has fair-use limits; self-host for scale.
+ */
+function rasterSource(provider: SatelliteProvider) {
+  if (provider === "esri") {
+    return {
+      type: "raster" as const,
+      tiles: [
+        "https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}",
+      ],
+      tileSize: 256,
+      maxzoom: 19,
+      attribution:
+        'Imagery © <a href="https://www.esri.com" target="_blank" rel="noopener">Esri</a>, ' +
+        "Maxar, Earthstar Geographics, and the GIS User Community",
+    };
+  }
   return {
     type: "raster" as const,
     tiles: [
@@ -88,32 +120,36 @@ function eoxRasterSource() {
   };
 }
 
-const SATELLITE_STYLE: StyleSpecification = {
-  version: 8,
-  // Glyphs so symbol layers (our overlay labels) can render text over imagery.
-  glyphs: "https://tiles.openfreemap.org/fonts/{fontstack}/{range}.pbf",
-  sources: { "eox-s2cloudless": eoxRasterSource() },
-  layers: [
-    { id: "bg", type: "background", paint: { "background-color": "#0a1626" } },
-    { id: "eox-s2cloudless", type: "raster", source: "eox-s2cloudless" },
-  ],
-};
+/** Imagery-only fallback style (used if the hybrid vector style can't load). */
+function imageryOnlyStyle(provider: SatelliteProvider): StyleSpecification {
+  return {
+    version: 8,
+    glyphs: "https://tiles.openfreemap.org/fonts/{fontstack}/{range}.pbf",
+    sources: { [SAT_SOURCE_ID]: rasterSource(provider) },
+    layers: [
+      { id: "sat-bg", type: "background", paint: { "background-color": "#0a1626" } },
+      { id: SAT_SOURCE_ID, type: "raster", source: SAT_SOURCE_ID },
+    ],
+  };
+}
 
 /**
  * Build the hybrid satellite style: OpenFreeMap labels/roads/POIs over imagery.
- * Fetches the Liberty vector style, splices the EOX raster in at the bottom, and
- * removes the opaque area fills (landcover/landuse/water/buildings/hillshade)
+ * Fetches the Liberty vector style, splices the imagery raster in at the bottom,
+ * and removes the opaque area fills (landcover/landuse/water/buildings/hillshade)
  * that would otherwise hide the imagery — keeping line + symbol layers so place
  * names, roads, boundaries and tourist POIs remain visible on the satellite.
  *
- * Throws on network/parse failure; the caller falls back to SATELLITE_STYLE.
+ * Throws on network/parse failure; the caller falls back to imagery-only.
  */
-export async function buildHybridSatellite(): Promise<StyleSpecification> {
+export async function buildHybridSatellite(
+  provider: SatelliteProvider
+): Promise<StyleSpecification> {
   const res = await fetch(LIBERTY_STYLE_URL, { cache: "no-cache" });
   if (!res.ok) throw new Error(`Liberty style HTTP ${res.status}`);
   const base = (await res.json()) as StyleSpecification;
 
-  base.sources = { ...base.sources, "eox-s2cloudless": eoxRasterSource() };
+  base.sources = { ...base.sources, [SAT_SOURCE_ID]: rasterSource(provider) };
 
   // Keep only line + symbol layers (roads, boundaries, labels, POIs). Drop the
   // opaque fills so the imagery underneath shows through.
@@ -123,7 +159,7 @@ export async function buildHybridSatellite(): Promise<StyleSpecification> {
 
   base.layers = [
     { id: "sat-bg", type: "background", paint: { "background-color": "#0a1626" } },
-    { id: "eox-s2cloudless", type: "raster", source: "eox-s2cloudless" },
+    { id: SAT_SOURCE_ID, type: "raster", source: SAT_SOURCE_ID },
     ...overlayLayers,
   ];
   return base;
@@ -155,8 +191,17 @@ export const BASEMAP_STYLES: readonly BasemapStyle[] = [
   },
   {
     id: "satellite",
-    label: "Satellite",
-    style: SATELLITE_STYLE,
+    label: "Satellite (HD)",
+    // High-resolution Esri imagery — houses/roads/footpaths clearly visible.
+    style: imageryOnlyStyle("esri"),
+    hybrid: "esri",
+  },
+  {
+    id: "satellite-open",
+    label: "Satellite (open)",
+    // Commercial-clean Sentinel-2 (CC-BY 4.0) — ~10 m, coarser detail.
+    style: imageryOnlyStyle("sentinel2"),
+    hybrid: "sentinel2",
   },
 ];
 
