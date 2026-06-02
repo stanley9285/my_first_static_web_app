@@ -10,6 +10,7 @@ fast, offline-capable, and avoids hammering the upstream providers.
 | `geoBoundaries-MWI-ADM2.geojson` (28 districts) | geoBoundaries gbOpen ADM2, Malawi | `npm run data:build` | CC-BY 4.0 |
 | `constituencies-MWI.geojson` | **Not bundled — scaffold only** | manual (see below) | **Unconfirmed — verify before commercial use** |
 | `landforms-MWI.geojson` (29 features) | Curated geographic facts | manual edit | Public domain (factual names & coordinates) |
+| `roads-MWI.geojson` (6 corridors) | Curated simplified corridors | manual edit | Curated; geometry **not lane-accurate** |
 
 ## geoBoundaries (ADM1 / ADM2)
 
@@ -54,3 +55,15 @@ layer is **commercial-use-safe**. Coordinates are approximate label points, not
 survey-grade. Extend it by appending features matching the `metadata.featureSchema`
 in the file (`level: "landform"`, `featureType`, optional
 `elevation`/`region`/`description`; Point geometry).
+
+## Freight roads
+
+`roads-MWI.geojson` is a curated set of Malawi's primary goods-transport
+corridors as **simplified centrelines** (LineStrings routed through the main
+towns). Road references and town locations are factual; the geometry is an
+**overview, not lane-accurate**. It is suitable for highlighting corridors and
+for the tracking demo, but **not** for map-matching real vehicle GPS positions
+— for that, replace it with a licensed road network (OpenStreetMap/ODbL or a
+commercial dataset) plus a routing/map-matching engine. See the README
+"Freight roads & vehicle tracking" section. Lengths in `lengthKm` are computed
+from the simplified geometry and are approximate.

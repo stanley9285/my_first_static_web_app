@@ -118,6 +118,19 @@ body {
   border-color: var(--accent);
 }
 
+.demo-badge {
+  display: inline-block;
+  margin-left: 4px;
+  padding: 0 5px;
+  border-radius: 4px;
+  background: #ffcc00;
+  color: #3a2b00;
+  font-size: 9px;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  vertical-align: middle;
+}
+
 /* ── Sidebar ───────────────────────────────────────────────────────────── */
 #sidebar {
   position: absolute;

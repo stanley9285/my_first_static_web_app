@@ -23,6 +23,8 @@ import {
   getOverlay,
   LANDFORM_COLORS,
   LANDFORM_DEFAULT_COLOR,
+  ROAD_COLORS,
+  ROAD_DEFAULT_COLOR,
 } from "../config/overlays";
 import { loadOverlay } from "../data/loader";
 
@@ -36,6 +38,13 @@ export interface SelectedFeatureInfo {
   featureType?: string;
   elevation?: number;
   description?: string;
+  /** Road-specific fields (populated only for the line overlay). */
+  ref?: string;
+  corridor?: string;
+  from?: string;
+  to?: string;
+  surface?: string;
+  lengthKm?: number;
   /** [lng, lat] of a point feature — used for the GPS / directions actions. */
   coord?: [number, number];
 }
@@ -51,18 +60,41 @@ const fillId = (id: OverlayId) => `ov-${id}-fill`;
 const lineId = (id: OverlayId) => `ov-${id}-line`;
 const circleId = (id: OverlayId) => `ov-${id}-circle`;
 const labelId = (id: OverlayId) => `ov-${id}-label`;
+const roadCasingId = (id: OverlayId) => `ov-${id}-rcasing`;
+const roadLineId = (id: OverlayId) => `ov-${id}-rline`;
+const roadLabelId = (id: OverlayId) => `ov-${id}-rlabel`;
 
-/** Build a MapLibre `match` expression mapping featureType → marker colour. */
-function landformColorExpr(): maplibregl.ExpressionSpecification {
-  const stops: (string | string[])[] = [];
-  for (const [type, color] of Object.entries(LANDFORM_COLORS)) {
-    stops.push(type, color);
-  }
+/** All layer ids that could exist for an overlay, for visibility toggling. */
+const allLayerIds = (id: OverlayId): string[] => [
+  fillId(id),
+  lineId(id),
+  circleId(id),
+  labelId(id),
+  roadCasingId(id),
+  roadLineId(id),
+  roadLabelId(id),
+];
+
+/** The single layer used for hover/click, per render kind. */
+function interactiveLayerId(o: { id: OverlayId; kind?: string }): string {
+  if (o.kind === "point") return circleId(o.id);
+  if (o.kind === "line") return roadLineId(o.id);
+  return fillId(o.id);
+}
+
+/** `match` expression mapping a property value → colour, with fallback. */
+function colorByProp(
+  prop: string,
+  table: Record<string, string>,
+  fallback: string
+): maplibregl.ExpressionSpecification {
+  const stops: string[] = [];
+  for (const [k, v] of Object.entries(table)) stops.push(k, v);
   return [
     "match",
-    ["get", "featureType"],
+    ["get", prop],
     ...stops,
-    LANDFORM_DEFAULT_COLOR,
+    fallback,
   ] as unknown as maplibregl.ExpressionSpecification;
 }
 
@@ -129,6 +161,10 @@ export class OverlayManager {
       this.addPointLayers(id);
       return;
     }
+    if (cfg.kind === "line") {
+      this.addLineLayers(id);
+      return;
+    }
 
     if (!this.map.getLayer(fillId(id))) {
       this.map.addLayer({
@@ -175,7 +211,7 @@ export class OverlayManager {
   /** Coloured circle markers + always-on name labels for a point overlay. */
   private addPointLayers(id: OverlayId): void {
     const vis = this.visible[id] ? "visible" : "none";
-    const color = landformColorExpr();
+    const color = colorByProp("featureType", LANDFORM_COLORS, LANDFORM_DEFAULT_COLOR);
 
     if (!this.map.getLayer(circleId(id))) {
       this.map.addLayer({
@@ -236,12 +272,89 @@ export class OverlayManager {
     }
   }
 
+  /** White casing + coloured line + along-line ref labels for a road overlay. */
+  private addLineLayers(id: OverlayId): void {
+    const vis = this.visible[id] ? "visible" : "none";
+    const color = colorByProp("roadClass", ROAD_COLORS, ROAD_DEFAULT_COLOR);
+    // Width grows with zoom; selection/hover add emphasis.
+    const lineWidth: maplibregl.ExpressionSpecification = [
+      "interpolate",
+      ["linear"],
+      ["zoom"],
+      5,
+      ["case", ["boolean", ["feature-state", "selected"], false], 4, 2],
+      11,
+      [
+        "case",
+        ["boolean", ["feature-state", "selected"], false],
+        9,
+        ["boolean", ["feature-state", "hover"], false],
+        7,
+        5,
+      ],
+    ] as unknown as maplibregl.ExpressionSpecification;
+
+    if (!this.map.getLayer(roadCasingId(id))) {
+      this.map.addLayer({
+        id: roadCasingId(id),
+        type: "line",
+        source: srcId(id),
+        layout: { visibility: vis, "line-cap": "round", "line-join": "round" },
+        paint: {
+          "line-color": "#ffffff",
+          "line-opacity": 0.9,
+          "line-width": [
+            "interpolate",
+            ["linear"],
+            ["zoom"],
+            5,
+            4,
+            11,
+            9,
+          ],
+        },
+      });
+    }
+
+    if (!this.map.getLayer(roadLineId(id))) {
+      this.map.addLayer({
+        id: roadLineId(id),
+        type: "line",
+        source: srcId(id),
+        layout: { visibility: vis, "line-cap": "round", "line-join": "round" },
+        paint: { "line-color": color, "line-width": lineWidth },
+      });
+    }
+
+    if (!this.map.getLayer(roadLabelId(id))) {
+      this.map.addLayer({
+        id: roadLabelId(id),
+        type: "symbol",
+        source: srcId(id),
+        layout: {
+          visibility: vis,
+          "symbol-placement": "line",
+          "text-field": ["get", "ref"],
+          "text-size": ["interpolate", ["linear"], ["zoom"], 6, 11, 11, 14],
+          "text-font": ["Noto Sans Regular"],
+          "text-padding": 2,
+          "symbol-spacing": 220,
+        },
+        paint: {
+          "text-color": "#7a0a16",
+          "text-halo-color": "#ffffff",
+          "text-halo-width": 1.8,
+        },
+      });
+    }
+  }
+
   private wireEvents(): void {
     if (this.eventsWired) return;
     this.eventsWired = true;
     for (const o of OVERLAYS) {
-      // Interact via the circle for point overlays, the fill for polygons.
-      const layer = o.kind === "point" ? circleId(o.id) : fillId(o.id);
+      // Interact via the circle (points), the road line (roads), or the fill.
+      const layer = interactiveLayerId(o);
       // Delegated handlers are safe to register before the layer exists; they
       // simply match nothing until the layer is (re)added.
 
@@ -325,8 +438,8 @@ export class OverlayManager {
   setVisibility(id: OverlayId, on: boolean): void {
     this.visible[id] = on;
     const v = on ? "visible" : "none";
-    // Toggle whichever layers exist for this overlay (polygon or point pair).
-    for (const lid of [fillId(id), lineId(id), circleId(id), labelId(id)]) {
+    // Toggle whichever layers exist for this overlay (polygon/point/line set).
+    for (const lid of allLayerIds(id)) {
       if (this.map.getLayer(lid)) this.map.setLayoutProperty(lid, "visibility", v);
     }
   }
@@ -443,6 +556,12 @@ function infoFromProps(
     featureType: props.featureType as string | undefined,
     elevation: num(props.elevation),
     description: props.description as string | undefined,
+    ref: props.ref as string | undefined,
+    corridor: props.corridor as string | undefined,
+    from: props.from as string | undefined,
+    to: props.to as string | undefined,
+    surface: props.surface as string | undefined,
+    lengthKm: num(props.lengthKm),
     coord: geom ? pointCoord(geom) ?? undefined : undefined,
   };
 }

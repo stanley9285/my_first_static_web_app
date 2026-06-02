@@ -10,6 +10,7 @@ import { store } from "../state";
 export interface ControlHandlers {
   onStyleChange: (styleId: string) => void;
   onTerrainToggle: (on: boolean) => void;
+  onTrackingToggle: (on: boolean) => void;
   onHome: () => void;
 }
 
@@ -65,6 +66,33 @@ export function renderControls(root: HTMLElement, handlers: ControlHandlers): vo
 
   terrainGroup.appendChild(terrainBtn);
 
+  // ── Live goods-vehicle tracking toggle ────────────────────────────────────
+  const trackGroup = document.createElement("div");
+  trackGroup.className = "control-group control-row";
+
+  const trackBtn = document.createElement("button");
+  trackBtn.type = "button";
+  trackBtn.id = "tracking-toggle";
+  trackBtn.className = "toggle-btn";
+  trackBtn.setAttribute("role", "switch");
+  trackBtn.setAttribute("aria-checked", String(s.tracking));
+  trackBtn.setAttribute("aria-label", "Toggle live goods-vehicle tracking (demo)");
+  const setTrackLabel = (on: boolean) => {
+    trackBtn.innerHTML = on
+      ? 'Track goods: On <span class="demo-badge">DEMO</span>'
+      : "Track goods: Off";
+    trackBtn.classList.toggle("on", on);
+    trackBtn.setAttribute("aria-checked", String(on));
+  };
+  setTrackLabel(s.tracking);
+  trackBtn.addEventListener("click", () => {
+    const next = trackBtn.getAttribute("aria-checked") !== "true";
+    setTrackLabel(next);
+    handlers.onTrackingToggle(next);
+  });
+
+  trackGroup.appendChild(trackBtn);
+
   // ── Reset / home ──────────────────────────────────────────────────────────
   const homeBtn = document.createElement("button");
   homeBtn.type = "button";
@@ -78,12 +106,15 @@ export function renderControls(root: HTMLElement, handlers: ControlHandlers): vo
   homeGroup.className = "control-group";
   homeGroup.appendChild(homeBtn);
 
-  root.append(styleGroup, terrainGroup, homeGroup);
+  root.append(styleGroup, terrainGroup, trackGroup, homeGroup);
 
-  // Keep the terrain button in sync if state changes elsewhere.
+  // Keep toggle buttons in sync if state changes elsewhere.
   store.subscribe((st) => {
     if ((terrainBtn.getAttribute("aria-checked") === "true") !== st.terrain) {
       setTerrainLabel(st.terrain);
+    }
+    if ((trackBtn.getAttribute("aria-checked") === "true") !== st.tracking) {
+      setTrackLabel(st.tracking);
     }
     if (select.value !== st.style) select.value = st.style;
   });

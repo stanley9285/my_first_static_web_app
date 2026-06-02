@@ -4,6 +4,8 @@ import type {
   Polygon,
   MultiPolygon,
   Point,
+  LineString,
+  MultiLineString,
   Geometry,
 } from "geojson";
 
@@ -17,7 +19,7 @@ export interface OverlayFeatureProps {
   /** Display name. */
   name: string;
   /** Which overlay this feature belongs to. */
-  level: "region" | "district" | "constituency" | "landform";
+  level: "region" | "district" | "constituency" | "landform" | "road";
   /** Parent ADM1 region name (districts, constituencies & landforms). */
   region?: string;
   /** Parent ADM2 district name (constituencies only, where known). */
@@ -28,11 +30,24 @@ export interface OverlayFeatureProps {
   featureType?: string;
   /** Landforms: elevation in metres (peaks/plateaus) or lake surface level. */
   elevation?: number;
-  /** Landforms: short descriptive blurb shown in the detail card. */
+  /** Landforms / roads: short descriptive blurb shown in the detail card. */
   description?: string;
+  /** Roads: reference (e.g. M1), class, corridor, endpoints, surface, length. */
+  ref?: string;
+  roadClass?: string;
+  corridor?: string;
+  from?: string;
+  to?: string;
+  surface?: string;
+  lengthKm?: number;
 }
 
-export type OverlayGeometry = Polygon | MultiPolygon | Point;
+export type OverlayGeometry =
+  | Polygon
+  | MultiPolygon
+  | Point
+  | LineString
+  | MultiLineString;
 export type OverlayFeature = Feature<OverlayGeometry, OverlayFeatureProps>;
 export type OverlayCollection = FeatureCollection<
   OverlayGeometry,
@@ -43,7 +58,12 @@ export type OverlayCollection = FeatureCollection<
 export type AnyGeometry = Geometry;
 
 /** The switchable overlay tabs. */
-export type OverlayId = "regions" | "districts" | "constituencies" | "landforms";
+export type OverlayId =
+  | "regions"
+  | "districts"
+  | "constituencies"
+  | "landforms"
+  | "roads";
 
 /** Persisted UI + map state (mirrored to the URL hash). */
 export interface AppState {
@@ -62,4 +82,33 @@ export interface AppState {
   pitch: number;
   /** Selected feature, as `${OverlayId}:${featureId}` or null. */
   selected: string | null;
+  /** Live goods-vehicle tracking enabled (demo feed in the default build). */
+  tracking: boolean;
+}
+
+/**
+ * A single goods-vehicle position sample — the contract a real-time GPS feed
+ * must satisfy (see src/data/vehicles.ts). Designed to mirror a typical AVL /
+ * telematics payload so a production feed can map onto it directly.
+ */
+export interface VehiclePosition {
+  /** Stable vehicle/asset id. */
+  id: string;
+  /** Human label, e.g. number plate. */
+  plate: string;
+  /** Position (WGS84). */
+  lng: number;
+  lat: number;
+  /** Heading in degrees clockwise from north (0–360). */
+  heading: number;
+  /** Ground speed in km/h. */
+  speedKmh: number;
+  /** Operational status. */
+  status: "moving" | "idle" | "stopped" | "loading";
+  /** Cargo description (optional). */
+  cargo?: string;
+  /** Ref/name of the corridor the vehicle is currently on (optional). */
+  road?: string;
+  /** Last-update timestamp (epoch ms). */
+  updatedAt: number;
 }

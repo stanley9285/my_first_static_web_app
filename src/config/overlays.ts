@@ -17,9 +17,10 @@ export interface OverlayConfig {
   /**
    * How the overlay is rendered. "polygon" → semi-transparent fill + outline
    * (boundaries). "point" → labelled, coloured markers (landforms/features).
+   * "line" → cased, coloured lines with along-line ref labels (roads).
    * Defaults to "polygon".
    */
-  kind?: "polygon" | "point";
+  kind?: "polygon" | "point" | "line";
   /** Fill / outline / marker colour (semi-transparent fill for polygons). */
   color: string;
   /** Fill opacity for the resting (non-hovered) state. Polygons only. */
@@ -53,6 +54,14 @@ export const LANDFORM_COLORS: Record<string, string> = {
   reserve: "#2e8b3d",
 };
 export const LANDFORM_DEFAULT_COLOR = "#6a737d";
+
+/** Line colours per road class for the freight-roads (line) overlay. */
+export const ROAD_COLORS: Record<string, string> = {
+  trunk: "#d7263d", // M1 spine — most prominent
+  primary: "#f46036", // other primary corridors
+  corridor: "#8a4fff", // export-corridor border links
+};
+export const ROAD_DEFAULT_COLOR = "#d7263d";
 
 export const OVERLAYS: readonly OverlayConfig[] = [
   {
@@ -101,6 +110,25 @@ export const OVERLAYS: readonly OverlayConfig[] = [
     // Factual place names + coordinates are not copyrightable; curated locally.
     attribution:
       'Landforms: curated geographic facts (names &amp; coordinates), public domain',
+  },
+  {
+    id: "roads",
+    label: "Freight roads",
+    url: "data/roads-MWI.geojson",
+    kind: "line",
+    color: "#d7263d",
+    fillOpacity: 1, // unused for line overlays
+    defaultVisible: true,
+    attribution:
+      'Freight corridors: simplified centrelines, curated locally (overview only)',
+    // PRODUCTION: this is a simplified corridor overview, NOT lane-accurate
+    // geometry. For real-time vehicle map-matching/snapping, swap in a licensed
+    // road network (OpenStreetMap — ODbL share-alike — or a commercial dataset)
+    // plus a routing/map-matching engine. See README + the dataset metadata.
+    licenseWarning:
+      "Freight-road geometry here is a simplified corridor overview, not " +
+      "lane-accurate. For GPS map-matching of vehicles, replace it with a " +
+      "licensed road network (OSM/ODbL or commercial) — see README.",
   },
 ] as const;
 
