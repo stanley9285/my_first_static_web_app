@@ -10,7 +10,7 @@ fast, offline-capable, and avoids hammering the upstream providers.
 | `geoBoundaries-MWI-ADM2.geojson` (28 districts) | geoBoundaries gbOpen ADM2, Malawi | `npm run data:build` | CC-BY 4.0 |
 | `constituencies-MWI.geojson` | **Not bundled — scaffold only** | manual (see below) | **Unconfirmed — verify before commercial use** |
 | `landforms-MWI.geojson` (29 features) | Curated geographic facts | manual edit | Public domain (factual names & coordinates) |
-| `roads-MWI.geojson` (6 corridors) | Curated simplified corridors | manual edit | Curated; geometry **not lane-accurate** |
+| `roads-MWI.geojson` (11 routes) | Curated simplified routes | manual edit | Curated; geometry **not lane-accurate** |
 
 ## geoBoundaries (ADM1 / ADM2)
 

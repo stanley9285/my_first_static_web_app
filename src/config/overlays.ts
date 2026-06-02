@@ -113,7 +113,7 @@ export const OVERLAYS: readonly OverlayConfig[] = [
   },
   {
     id: "roads",
-    label: "Freight roads",
+    label: "Roads",
     url: "data/roads-MWI.geojson",
     kind: "line",
     color: "#d7263d",

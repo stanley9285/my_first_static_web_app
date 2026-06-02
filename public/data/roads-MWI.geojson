@@ -1,7 +1,7 @@
 {
   "type": "FeatureCollection",
   "metadata": {
-    "_comment": "Curated overview of Malawi's primary goods-transport corridors. Geometry is SIMPLIFIED centreline routing through the main towns (waypoints), suitable for a corridor highlight/overview — NOT survey-grade lane geometry. For precise GPS map-matching/snapping of vehicles, replace with real road geometry (OpenStreetMap, ODbL share-alike, or a commercial road dataset) and a routing engine. See README.",
+    "_comment": "Curated overview of Malawi's main roads used for transporting goods, incl. border-crossing routes. Geometry is SIMPLIFIED centreline routing through the main towns (waypoints), suitable for a corridor highlight/overview — NOT survey-grade lane geometry. For precise GPS map-matching/snapping of vehicles, replace with a licensed road network (OpenStreetMap, ODbL share-alike, or commercial) + a routing engine. Some road references (ref) are route labels, not official M-numbers, where the official number was uncertain — verify before commercial launch. See README.",
     "license": "Geometry: simplified/approximate, authored locally from public geographic knowledge (factual road references & town locations; not copyrightable). Replace with a licensed road network for production map-matching.",
     "featureSchema": {
       "geometry": "LineString (WGS84 / EPSG:4326)",
@@ -9,9 +9,9 @@
         "id": "string",
         "name": "string",
         "level": "road",
-        "ref": "string (road reference, e.g. M1)",
+        "ref": "string (road reference or route label)",
         "roadClass": "trunk | primary | corridor",
-        "corridor": "string (export/transport corridor served)",
+        "corridor": "string (transport corridor / role)",
         "from": "string",
         "to": "string",
         "surface": "string",
@@ -155,16 +155,16 @@
     {
       "type": "Feature",
       "properties": {
-        "id": "rd-m3",
-        "name": "M3 Eastern Road",
+        "id": "rd-bt-mangochi",
+        "name": "Blantyre–Mangochi Road (via Zomba & Liwonde)",
         "level": "road",
-        "ref": "M3",
+        "ref": "BT–Mangochi",
         "roadClass": "primary",
-        "corridor": "Eastern (Blantyre–Mangochi)",
+        "corridor": "Eastern (Blantyre–Zomba–Liwonde–Mangochi)",
         "from": "Blantyre",
         "to": "Mangochi",
         "surface": "paved",
-        "lengthKm": 157
+        "lengthKm": 158
       },
       "geometry": {
         "type": "LineString",
@@ -182,6 +182,10 @@
             -15.07
           ],
           [
+            35.3,
+            -14.7
+          ],
+          [
             35.262,
             -14.482
           ]
@@ -191,10 +195,118 @@
     {
       "type": "Feature",
       "properties": {
-        "id": "rd-m6",
-        "name": "M6 Chitipa Road",
+        "id": "rd-bt-muloza",
+        "name": "Blantyre–Mulanje–Muloza Road",
         "level": "road",
-        "ref": "M6",
+        "ref": "BT–Muloza",
+        "roadClass": "primary",
+        "corridor": "Mulanje / Muloza (Mozambique) border",
+        "from": "Blantyre",
+        "to": "Muloza (Mozambique border)",
+        "surface": "paved",
+        "lengthKm": 81
+      },
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [
+          [
+            35.01,
+            -15.786
+          ],
+          [
+            35.05,
+            -15.802
+          ],
+          [
+            35.3,
+            -15.9
+          ],
+          [
+            35.51,
+            -16.03
+          ],
+          [
+            35.62,
+            -16.18
+          ]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "id": "rd-ll-mchinji",
+        "name": "Lilongwe–Mchinji Road (Mwami border)",
+        "level": "road",
+        "ref": "LL–Mchinji",
+        "roadClass": "primary",
+        "corridor": "Lilongwe–Mchinji–Zambia (Mwami border)",
+        "from": "Lilongwe",
+        "to": "Mwami (Zambia border)",
+        "surface": "paved",
+        "lengthKm": 116
+      },
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [
+          [
+            33.783,
+            -13.983
+          ],
+          [
+            33.4,
+            -13.86
+          ],
+          [
+            32.88,
+            -13.8
+          ],
+          [
+            32.74,
+            -13.77
+          ]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "id": "rd-ll-salima",
+        "name": "Lilongwe–Salima Road",
+        "level": "road",
+        "ref": "LL–Salima",
+        "roadClass": "primary",
+        "corridor": "Lilongwe–Salima (lakeshore link)",
+        "from": "Lilongwe",
+        "to": "Salima",
+        "surface": "paved",
+        "lengthKm": 77
+      },
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [
+          [
+            33.783,
+            -13.983
+          ],
+          [
+            34.05,
+            -13.87
+          ],
+          [
+            34.46,
+            -13.78
+          ]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "id": "rd-karonga-chitipa",
+        "name": "Karonga–Chitipa Road",
+        "level": "road",
+        "ref": "Karonga–Chitipa",
         "roadClass": "primary",
         "corridor": "Chitipa link",
         "from": "Karonga",
@@ -223,10 +335,42 @@
     {
       "type": "Feature",
       "properties": {
-        "id": "rd-beira",
-        "name": "Beira Corridor link",
+        "id": "rd-dedza-moz",
+        "name": "Dedza–Mozambique Border Road",
         "level": "road",
-        "ref": "M6/A",
+        "ref": "Dedza–Moz",
+        "roadClass": "corridor",
+        "corridor": "Dedza–Mozambique border",
+        "from": "Dedza",
+        "to": "Mozambique border",
+        "surface": "paved",
+        "lengthKm": 21
+      },
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [
+          [
+            34.333,
+            -14.378
+          ],
+          [
+            34.43,
+            -14.4
+          ],
+          [
+            34.52,
+            -14.42
+          ]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "id": "rd-bt-mwanza",
+        "name": "Blantyre–Mwanza Border Road (Beira corridor)",
+        "level": "road",
+        "ref": "BT–Mwanza",
         "roadClass": "corridor",
         "corridor": "Beira (to Mozambique port of Beira)",
         "from": "Blantyre",
@@ -255,16 +399,56 @@
     {
       "type": "Feature",
       "properties": {
-        "id": "rd-nacala",
-        "name": "Nacala Corridor link",
+        "id": "rd-liwonde-chiponde",
+        "name": "Liwonde–Namwera–Chiponde Road (Nacala corridor)",
         "level": "road",
-        "ref": "M3/A",
+        "ref": "Liwonde–Chiponde",
         "roadClass": "corridor",
         "corridor": "Nacala (to Mozambique port of Nacala)",
-        "from": "Mangochi",
-        "to": "Namwera (Mozambique border)",
+        "from": "Liwonde",
+        "to": "Chiponde (Mozambique border)",
         "surface": "paved",
-        "lengthKm": 45
+        "lengthKm": 96
+      },
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [
+          [
+            35.23,
+            -15.07
+          ],
+          [
+            35.38,
+            -14.82
+          ],
+          [
+            35.45,
+            -14.4
+          ],
+          [
+            35.52,
+            -14.34
+          ],
+          [
+            35.56,
+            -14.3
+          ]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "id": "rd-mangochi-chiponde",
+        "name": "Mangochi–Namwera–Chiponde Road",
+        "level": "road",
+        "ref": "Mangochi–Chiponde",
+        "roadClass": "corridor",
+        "corridor": "Nacala link (Mangochi side)",
+        "from": "Mangochi",
+        "to": "Chiponde (Mozambique border)",
+        "surface": "paved",
+        "lengthKm": 38
       },
       "geometry": {
         "type": "LineString",
@@ -274,11 +458,19 @@
             -14.482
           ],
           [
-            35.45,
-            -14.38
+            35.4,
+            -14.42
           ],
           [
-            35.63,
+            35.45,
+            -14.4
+          ],
+          [
+            35.52,
+            -14.34
+          ],
+          [
+            35.56,
             -14.3
           ]
         ]
