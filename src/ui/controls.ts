@@ -11,6 +11,7 @@ export interface ControlHandlers {
   onStyleChange: (styleId: string) => void;
   onTerrainToggle: (on: boolean) => void;
   onTrackingToggle: (on: boolean) => void;
+  onAttractionsToggle: (on: boolean) => void;
   onHome: () => void;
 }
 
@@ -93,6 +94,30 @@ export function renderControls(root: HTMLElement, handlers: ControlHandlers): vo
 
   trackGroup.appendChild(trackBtn);
 
+  // ── Tourist-attraction pins toggle ────────────────────────────────────────
+  const attrGroup = document.createElement("div");
+  attrGroup.className = "control-group control-row";
+
+  const attrBtn = document.createElement("button");
+  attrBtn.type = "button";
+  attrBtn.id = "attractions-toggle";
+  attrBtn.className = "toggle-btn";
+  attrBtn.setAttribute("role", "switch");
+  attrBtn.setAttribute("aria-checked", String(s.attractions));
+  attrBtn.setAttribute("aria-label", "Toggle tourist attraction pins");
+  const setAttrLabel = (on: boolean) => {
+    attrBtn.textContent = on ? "📍 Attractions: On" : "📍 Attractions: Off";
+    attrBtn.classList.toggle("on", on);
+    attrBtn.setAttribute("aria-checked", String(on));
+  };
+  setAttrLabel(s.attractions);
+  attrBtn.addEventListener("click", () => {
+    const next = attrBtn.getAttribute("aria-checked") !== "true";
+    setAttrLabel(next);
+    handlers.onAttractionsToggle(next);
+  });
+  attrGroup.appendChild(attrBtn);
+
   // ── Reset / home ──────────────────────────────────────────────────────────
   const homeBtn = document.createElement("button");
   homeBtn.type = "button";
@@ -106,7 +131,7 @@ export function renderControls(root: HTMLElement, handlers: ControlHandlers): vo
   homeGroup.className = "control-group";
   homeGroup.appendChild(homeBtn);
 
-  root.append(styleGroup, terrainGroup, trackGroup, homeGroup);
+  root.append(styleGroup, terrainGroup, trackGroup, attrGroup, homeGroup);
 
   // Keep toggle buttons in sync if state changes elsewhere.
   store.subscribe((st) => {
@@ -115,6 +140,9 @@ export function renderControls(root: HTMLElement, handlers: ControlHandlers): vo
     }
     if ((trackBtn.getAttribute("aria-checked") === "true") !== st.tracking) {
       setTrackLabel(st.tracking);
+    }
+    if ((attrBtn.getAttribute("aria-checked") === "true") !== st.attractions) {
+      setAttrLabel(st.attractions);
     }
     if (select.value !== st.style) select.value = st.style;
   });

@@ -11,6 +11,7 @@ fast, offline-capable, and avoids hammering the upstream providers.
 | `constituencies-MWI.geojson` | **Not bundled — scaffold only** | manual (see below) | **Unconfirmed — verify before commercial use** |
 | `landforms-MWI.geojson` (29 features) | Curated geographic facts | manual edit | Public domain (factual names & coordinates) |
 | `roads-MWI.geojson` (11 routes) | Curated simplified routes | manual edit | Curated; geometry **not lane-accurate** |
+| `attractions-MWI.geojson` (18) | Curated tourist sites | manual edit | Text facts public domain; **supply licensed images** |
 
 ## geoBoundaries (ADM1 / ADM2)
 

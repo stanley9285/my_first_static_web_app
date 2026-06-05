@@ -84,6 +84,8 @@ export interface AppState {
   selected: string | null;
   /** Live goods-vehicle tracking enabled (demo feed in the default build). */
   tracking: boolean;
+  /** Tourist-attraction pins visible. */
+  attractions: boolean;
 }
 
 /**
@@ -111,4 +113,31 @@ export interface VehiclePosition {
   road?: string;
   /** Last-update timestamp (epoch ms). */
   updatedAt: number;
+}
+
+/** A tourist attraction shown as an animated pin with a rich info card. */
+export interface Attraction {
+  id: string;
+  name: string;
+  category:
+    | "national-park"
+    | "reserve"
+    | "mountain"
+    | "plateau"
+    | "lake"
+    | "beach"
+    | "island"
+    | "waterfall"
+    | "cultural"
+    | "lodge"
+    | "landmark";
+  region?: string;
+  description?: string;
+  /** Official site or info page (opened in a new tab; may also be embedded). */
+  website?: string;
+  /** Licensed image URLs; empty → a styled placeholder is shown. */
+  images: string[];
+  /** [lng, lat]. */
+  lng: number;
+  lat: number;
 }

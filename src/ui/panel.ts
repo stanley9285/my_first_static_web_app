@@ -6,9 +6,10 @@
  * Pure DOM (no framework). Communicates with the app via callbacks.
  */
 
-import type { OverlayCollection, OverlayId, VehiclePosition } from "../types";
+import type { OverlayCollection, OverlayId, VehiclePosition, Attraction } from "../types";
 import { OVERLAYS, getOverlay } from "../config/overlays";
 import type { SelectedFeatureInfo } from "../map/overlays";
+import { categoryMeta } from "../map/attractions";
 
 export interface PanelHandlers {
   onTabChange: (id: OverlayId) => void;
@@ -233,6 +234,63 @@ export class PanelUI {
       ?.addEventListener("click", () => this.handlers.onCloseDetail());
   }
 
+  /** Rich detail card for a tourist attraction: photos, info, website. */
+  showAttractionDetail(a: Attraction): void {
+    const card = this.root.querySelector<HTMLElement>("#detail-card");
+    if (!card) return;
+    const meta = categoryMeta(a.category);
+    const catLabel = capitalize(a.category.replace(/-/g, " "));
+
+    // Photo gallery — real images if supplied, else a styled placeholder.
+    const imgs = (a.images ?? []).filter(safeHttpUrl);
+    const gallery = imgs.length
+      ? `<div class="att-gallery">${imgs
+          .map(
+            (u) =>
+              `<img src="${escapeAttr(u)}" alt="${escapeHtml(a.name)}" loading="lazy" referrerpolicy="no-referrer" onerror="this.style.display='none'">`
+          )
+          .join("")}</div>`
+      : `<div class="att-gallery placeholder" style="--pin-color:${meta.color}">
+           <span class="ph-icon">${meta.icon}</span>
+           <span class="ph-text">Photos: add licensed image URLs to <code>images[]</code></span>
+         </div>`;
+
+    const site = a.website && safeHttpUrl(a.website) ? a.website : "";
+    const websiteBtn = site
+      ? `<a class="att-btn primary" href="${escapeAttr(site)}" target="_blank" rel="noopener noreferrer">Visit website ↗</a>`
+      : "";
+    // "Embed" the site as an optional, collapsed preview (many sites block
+    // framing, so it is opt-in with a link fallback).
+    const embed = site
+      ? `<details class="att-embed">
+           <summary>Preview website</summary>
+           <iframe src="${escapeAttr(site)}" title="${escapeHtml(a.name)} website"
+             loading="lazy" referrerpolicy="no-referrer"
+             sandbox="allow-scripts allow-same-origin allow-popups"></iframe>
+           <p class="att-embed-note">If the preview stays blank, the site blocks embedding — use “Visit website”.</p>
+         </details>`
+      : "";
+
+    card.innerHTML = `
+      <div class="detail-head" style="border-color:${meta.color}">
+        <h3>${meta.icon} ${escapeHtml(a.name)}</h3>
+        <button type="button" id="detail-close" aria-label="Close details">✕</button>
+      </div>
+      ${gallery}
+      <dl class="detail-grid">
+        <dt>Category</dt><dd>${escapeHtml(catLabel)}</dd>
+        ${a.region ? `<dt>Region</dt><dd>${escapeHtml(a.region)}</dd>` : ""}
+      </dl>
+      ${a.description ? `<p class="att-desc">${escapeHtml(a.description)}</p>` : ""}
+      <div class="att-actions">${websiteBtn}</div>
+      ${embed}
+    `;
+    card.hidden = false;
+    card
+      .querySelector("#detail-close")
+      ?.addEventListener("click", () => this.handlers.onCloseDetail());
+  }
+
   // ── rendering ───────────────────────────────────────────────────────────────
   private renderShell(): void {
     this.root.innerHTML = `
@@ -371,6 +429,18 @@ function escapeHtml(s: string): string {
   return s.replace(/[&<>"']/g, (c) =>
     ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c] ?? c)
   );
+}
+
+/** Escape a value for use inside a double-quoted HTML attribute. */
+function escapeAttr(s: string): string {
+  return s.replace(/[&"<>]/g, (c) =>
+    ({ "&": "&amp;", '"': "&quot;", "<": "&lt;", ">": "&gt;" }[c] ?? c)
+  );
+}
+
+/** Allow only http(s) URLs (blocks javascript:/data: injection in href/src). */
+function safeHttpUrl(u: unknown): u is string {
+  return typeof u === "string" && /^https?:\/\//i.test(u);
 }
 
 const SINGULAR: Record<OverlayId, string> = {

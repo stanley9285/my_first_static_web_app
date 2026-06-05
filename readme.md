@@ -30,6 +30,10 @@ street/terrain/label detail and toggleable political boundary overlays —
   links — as cased, labelled lines). Boundaries render as semi-transparent
   fills + outlines so the basemap stays visible; hover highlight + name
   tooltip; click flies to the feature and opens a detail card.
+- **Tourist attractions** — every site shows an **animated pulsing pin**;
+  clicking one flies in and opens a rich info card with a **photo gallery**,
+  description and a **website link/embed** (lodges, parks, beaches, landmarks…).
+  Toggleable; on by default.
 - **Live goods-vehicle tracking** — a toggleable layer that plots tracked
   vehicles as status-coloured, heading-oriented markers, fed through a clean
   `VehicleFeed` interface. The default build ships a clearly-labelled **demo**
@@ -76,10 +80,12 @@ src/
     terrain.ts             3D terrain + hillshade toggle
     overlays.ts            Overlay rendering (polygon/point/line), interactions
     vehicles.ts            Vehicle marker rendering (status colour + heading)
+    attractions.ts         Animated pulsing pins for tourist attractions
   data/
     loader.ts              Typed, never-throws GeoJSON loader (graceful fail)
     constituencies.ts      Licence-aware constituency loader interface
     vehicles.ts            VehicleFeed interface + live-feed scaffold + demo
+    attractions.ts         Tourist-attraction loader
   ui/
     controls.ts            Style switcher / terrain / reset
     panel.ts               Tabs, toggles, feature list, detail card
@@ -92,6 +98,7 @@ public/data/               Local datasets served at /data/*.geojson
   constituencies-MWI.geojson        scaffold (empty — see below)
   landforms-MWI.geojson             29 curated natural features (points)
   roads-MWI.geojson                 11 goods routes incl. borders (lines)
+  attractions-MWI.geojson           18 tourist attractions (animated pins)
   SOURCES.md               Per-file provenance + refresh instructions
 ```
 
@@ -256,6 +263,24 @@ and emit batches to subscribers. Nothing in the map/UI layer changes. The
 default build's demo feed (`createDemoFeed`) animates simulated trucks along the
 corridors purely to showcase the capability — it is clearly badged **DEMO** in
 the UI and ships no data masquerading as real tracking.
+
+### Tourist attractions
+
+- **Source:** a curated set of Malawi attractions in
+  `public/data/attractions-MWI.geojson` (names, categories, coordinates and
+  descriptions are factual / not copyrightable). Rendered as animated pulsing
+  pins; click → fly-in + info card.
+- **Photos:** **not bundled** — supply your own **licensed** image URLs in each
+  feature's `images[]` (your own photos, official/operator photos, or
+  Creative-Commons/Wikimedia with attribution). Until then a styled placeholder
+  is shown. Do **not** hot-link copyrighted photos.
+- **Websites:** each site's `website` points to an official page or a Wikipedia
+  article — **replace lodge entries with the operator's booking site.** The card
+  links out (always works) and offers an optional inline *Preview* iframe; note
+  that many sites set `X-Frame-Options`/CSP and will refuse to embed, in which
+  case the “Visit website” link is the reliable path.
+- **Extending:** append features matching the file's `metadata.featureSchema`
+  (`level: "attraction"`, `category`, `images[]`, `website`); no code changes.
 
 ### Constituencies — ⚠ RIGHTS NOT CONFIRMED, DO NOT SHIP COMMERCIALLY YET
 
