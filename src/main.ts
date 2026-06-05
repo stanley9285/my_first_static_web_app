@@ -14,6 +14,8 @@ import { applyTerrain } from "./map/terrain";
 import { OverlayManager, type SelectedFeatureInfo } from "./map/overlays";
 import { VehicleLayer } from "./map/vehicles";
 import { createDemoFeed, type VehicleFeed } from "./data/vehicles";
+import { AttractionsLayer } from "./map/attractions";
+import { loadAttractions } from "./data/attractions";
 import { loadConstituencies } from "./data/constituencies";
 import { renderControls } from "./ui/controls";
 import { PanelUI } from "./ui/panel";
@@ -155,6 +157,12 @@ function bootstrap(): void {
     feed = null;
   }
 
+  // ── Tourist attractions (animated pins) ──────────────────────────────────────
+  const attractions = new AttractionsLayer(map, (a) => {
+    map.flyTo({ center: [a.lng, a.lat], zoom: Math.max(map.getZoom(), 13), duration: 900 });
+    panel.showAttractionDetail(a);
+  });
+
   // ── Controls (style switcher / terrain / tracking / reset) ───────────────────
   renderControls(controlsEl, {
     onStyleChange: (styleId) => {
@@ -166,6 +174,10 @@ function bootstrap(): void {
       applyTerrain(map, on);
     },
     onTrackingToggle: (on) => setTracking(on),
+    onAttractionsToggle: (on) => {
+      store.set({ attractions: on });
+      attractions.setVisible(on);
+    },
     onHome: () => {
       overlays.clearSelection();
       panel.clearDetail();
@@ -249,6 +261,11 @@ function bootstrap(): void {
     // If tracking was on before a refresh, start the (demo) feed now that the
     // roads data — which the simulation drives vehicles along — is available.
     if (store.get().tracking) startFeed();
+
+    // Tourist attraction pins (independent of map style; DOM markers).
+    const attrItems = await loadAttractions();
+    attractions.setItems(attrItems);
+    attractions.setVisible(store.get().attractions);
 
     // Surface the constituency scaffold state explicitly.
     const con = await loadConstituencies();

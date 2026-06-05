@@ -32,6 +32,7 @@ function defaultState(): AppState {
     pitch: MALAWI_HOME.pitch,
     selected: null,
     tracking: false,
+    attractions: true,
   };
 }
 
@@ -50,6 +51,7 @@ function parseHash(): Partial<AppState> {
 
   if (p.has("terrain")) out.terrain = p.get("terrain") === "1";
   if (p.has("track")) out.tracking = p.get("track") === "1";
+  if (p.has("att")) out.attractions = p.get("att") === "1";
 
   if (p.has("on")) {
     const on = new Set(
@@ -86,6 +88,7 @@ function serialize(s: AppState): string {
   p.set("style", s.style);
   p.set("terrain", s.terrain ? "1" : "0");
   p.set("track", s.tracking ? "1" : "0");
+  p.set("att", s.attractions ? "1" : "0");
   p.set("on", on);
   p.set("tab", s.activeTab);
   p.set("z", s.zoom.toFixed(2));
